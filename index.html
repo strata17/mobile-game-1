@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Reveal</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="phone">
+
+  <div id="hud">
+    <div class="hud-item">LEVEL <span id="hudLevel">1</span></div>
+    <div class="hud-item">SCORE <span id="hudScore">0</span></div>
+    <div class="hud-item">BEST <span id="hudBest">0</span></div>
+  </div>
+
+  <div id="progressTrack"><div id="progressFill"></div></div>
+
+  <div id="boardWrap">
+    <canvas id="board" width="360" height="360"></canvas>
+  </div>
+
+  <div id="hintRow">
+    <button id="hintBtn" class="btn btn-secondary">▶ Watch Ad: Reveal a Cell</button>
+  </div>
+
+  <!-- Start screen -->
+  <div id="menuScreen" class="overlay">
+    <div class="overlay-card">
+      <h1>Reveal</h1>
+      <p class="sub">Scratch away the cover. Avoid the bombs. Uncover 85% to clear each board.</p>
+      <button id="startBtn" class="btn btn-primary">Play</button>
+    </div>
+  </div>
+
+  <!-- Level complete screen -->
+  <div id="levelCompleteScreen" class="overlay hidden">
+    <div class="overlay-card">
+      <h2>Board Cleared!</h2>
+      <p class="sub">Level <span id="clearedLevel"></span> · +<span id="levelPoints"></span> pts</p>
+      <button id="nextLevelBtn" class="btn btn-primary">Next Level</button>
+    </div>
+  </div>
+
+  <!-- Game over screen -->
+  <div id="gameOverScreen" class="overlay hidden">
+    <div class="overlay-card">
+      <h2>💥 Boom.</h2>
+      <p class="sub">Score: <span id="finalScore"></span></p>
+      <button id="continueBtn" class="btn btn-primary">▶ Watch Ad to Continue</button>
+      <button id="restartBtn" class="btn btn-secondary">Restart</button>
+    </div>
+  </div>
+
+  <!-- Mock ad overlay -->
+  <div id="adScreen" class="overlay hidden">
+    <div class="overlay-card ad-card">
+      <div class="ad-label">AD</div>
+      <div id="adTimer">Loading…</div>
+    </div>
+  </div>
+
+</div>
+<script src="game.js"></script>
+</body>
+</html>
