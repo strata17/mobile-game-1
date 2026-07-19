@@ -4,9 +4,9 @@
 // (every 3rd game over), rewarded continue, rewarded hint.
 
 // ---------- Config ----------
-const WIN_RATIO = 0.85;
+const WIN_RATIO = 0.80;
 const REVEAL_MS = 240;          // per-tile cover dissolve duration
-const STAR_TIMES = [22, 45];    // <=22s -> 3 stars, <=45s -> 2 stars, else 1
+const STAR_TIMES = [30, 60];    // <=30s -> 3 stars, <=60s -> 2 stars, else 1
 
 const SCENES = [
   { emoji: "🐱", bg: ["#ff9a9e", "#fecfef"], deco: "#ffffff" },
@@ -186,19 +186,23 @@ function sizeBoard() {
 
 // ---------- Level generation ----------
 function gridSizeForLevel(level) { return Math.min(8 + Math.floor((level - 1) / 3), 12); }
-function bombDensityForLevel(level) { return Math.min(0.05 + (level - 1) * 0.015, 0.24); }
+// Bombs are visible and avoidable, so difficulty comes from how many there are
+// to thread around. Start gentle (level 1 = 3) and ramp steadily.
+function bombCountForLevel(level, cells) { return Math.min(2 + level, Math.floor(cells * 0.2)); }
 
 function buildLevel(level) {
   const gridSize = gridSizeForLevel(level);
-  const density = bombDensityForLevel(level);
   const revealed = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
   const revealAt = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
   const bomb = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
 
+  const target = bombCountForLevel(level, gridSize * gridSize);
   let bombCount = 0;
-  for (let r = 0; r < gridSize; r++)
-    for (let c = 0; c < gridSize; c++)
-      if (Math.random() < density) { bomb[r][c] = true; bombCount++; }
+  while (bombCount < target) {
+    const r = Math.floor(Math.random() * gridSize);
+    const c = Math.floor(Math.random() * gridSize);
+    if (!bomb[r][c]) { bomb[r][c] = true; bombCount++; }
+  }
 
   state.gridSize = gridSize;
   state.cellSize = state.boardPx / gridSize;
@@ -337,14 +341,23 @@ function revealCell(r, c, combo) {
 }
 
 let comboCount = 0;
+let lastX = null, lastY = null;
 
+function toBoard(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (state.boardPx / rect.width),
+    y: (clientY - rect.top) * (state.boardPx / rect.height),
+  };
+}
+
+// Precise single-cell scratch trail. We interpolate between successive pointer
+// samples so a fast drag reveals a continuous 1-cell-wide path — and can't skip
+// over a bomb that lies on that path. Bombs are visible, so steering around them
+// is the skill; dragging onto one detonates it.
 function scratchAt(clientX, clientY) {
   if (!state.playing) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (clientX - rect.left) * (state.boardPx / rect.width);
-  const y = (clientY - rect.top) * (state.boardPx / rect.height);
-  const col = Math.floor(x / state.cellSize);
-  const row = Math.floor(y / state.cellSize);
+  const { x, y } = toBoard(clientX, clientY);
 
   if (!state.hasScratchedEver) {
     state.hasScratchedEver = true;
@@ -352,15 +365,23 @@ function scratchAt(clientX, clientY) {
     tutorialHint.classList.add("hidden");
   }
 
+  if (lastX === null) { lastX = x; lastY = y; }
+  const dist = Math.hypot(x - lastX, y - lastY);
+  const steps = Math.max(1, Math.ceil(dist / (state.cellSize * 0.35)));
+
   let stopped = false;
-  for (let dr = -1; dr <= 1 && !stopped; dr++) {
-    for (let dc = -1; dc <= 1 && !stopped; dc++) {
-      if (row + dr < 0 || col + dc < 0 || row + dr >= state.gridSize || col + dc >= state.gridSize) continue;
-      if (state.revealed[row + dr][col + dc]) continue;
-      comboCount++;
-      stopped = revealCell(row + dr, col + dc, comboCount);
-    }
+  for (let i = 1; i <= steps && !stopped; i++) {
+    const px = lastX + (x - lastX) * (i / steps);
+    const py = lastY + (y - lastY) * (i / steps);
+    const col = Math.floor(px / state.cellSize);
+    const row = Math.floor(py / state.cellSize);
+    if (row < 0 || col < 0 || row >= state.gridSize || col >= state.gridSize) continue;
+    if (state.revealed[row][col]) continue;
+    comboCount++;
+    stopped = revealCell(row, col, comboCount);
   }
+  lastX = x; lastY = y;
+
   updateHud();
   if (state.score !== state._lastScore) { bumpScore(); state._lastScore = state.score; }
 }
@@ -371,10 +392,11 @@ canvas.addEventListener("pointerdown", (e) => {
   Sound.init();
   dragging = true;
   comboCount = 0;
+  lastX = lastY = null;
   scratchAt(e.clientX, e.clientY);
 });
 canvas.addEventListener("pointermove", (e) => { if (dragging) scratchAt(e.clientX, e.clientY); });
-window.addEventListener("pointerup", () => { dragging = false; comboCount = 0; });
+window.addEventListener("pointerup", () => { dragging = false; comboCount = 0; lastX = lastY = null; });
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 // ---------- Render loop ----------
@@ -423,6 +445,19 @@ function frame(now) {
       ctx.globalAlpha = coverAlpha;
       ctx.drawImage(coverTile, ox, oy, sz, sz);
       ctx.globalAlpha = 1;
+
+      // visible bomb warning so the player can scratch around it
+      if (!revealed && state.bomb[r][c]) {
+        const pulse = 0.7 + 0.3 * Math.sin(now / 260);
+        ctx.globalAlpha = 0.5 * pulse;
+        ctx.fillStyle = "#ff2b3d";
+        ctx.fillRect(ox, oy, sz, sz);
+        ctx.globalAlpha = 1;
+        ctx.font = `${cs * 0.55}px serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("⚠️", x + cs / 2, y + cs / 2 + cs * 0.02);
+      }
 
       if (revealed) {
         // white pop flash as it dissolves
