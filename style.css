@@ -695,3 +695,79 @@ body {
 .ic { flex-shrink: 0; }
 .btn .ic { vertical-align: -0.2em; }
 .collection-cell img { object-fit: cover; }
+
+/* ============ v2.1 Dribbble-inspired polish ============ */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1.5px, transparent 1.6px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+#phone { position: relative; z-index: 1; }
+
+.overlay-card h1 {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #fff3cf;
+  -webkit-text-fill-color: #fff3cf;
+  background: none;
+  filter: none;
+  text-shadow:
+    -2px -2px 0 #3a2358, 2px -2px 0 #3a2358, -2px 2px 0 #3a2358, 2px 2px 0 #3a2358,
+    -3px 0 0 #3a2358, 3px 0 0 #3a2358, 0 -3px 0 #3a2358, 0 3px 0 #3a2358,
+    0 7px 0 #271640, 0 11px 16px rgba(0,0,0,0.55);
+}
+.overlay-card h2 {
+  color: #fff;
+  text-shadow:
+    -1.5px -1.5px 0 rgba(28,17,48,0.95), 1.5px -1.5px 0 rgba(28,17,48,0.95),
+    -1.5px 1.5px 0 rgba(28,17,48,0.95), 1.5px 1.5px 0 rgba(28,17,48,0.95),
+    0 4px 9px rgba(0,0,0,0.45);
+}
+
+.logo-badge { position: relative; }
+.logo-badge::after {
+  content: "";
+  position: absolute;
+  inset: -34%;
+  z-index: -1;
+  background: radial-gradient(circle, rgba(255,220,150,0.3), transparent 66%);
+}
+
+.btn {
+  border-radius: 20px;
+  padding: 17px;
+  font-size: 18px;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn::before {
+  content: "";
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 6px;
+  height: 34%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+  pointer-events: none;
+  z-index: -1;
+}
+.btn-ghost { overflow: visible; }
+.btn-ghost::before { display: none; }
+
+#coinPill { position: relative; overflow: hidden; }
+#coinPill::before {
+  content: "";
+  position: absolute;
+  left: 10%; right: 10%; top: 3px; height: 40%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0));
+  pointer-events: none;
+}
