@@ -66,9 +66,24 @@
       <div class="logo-badge">🎯</div>
       <h1>Reveal</h1>
       <div id="streakBadge" class="streak-badge hidden">🔥 <span id="streakDays">0</span>-day streak</div>
-      <p class="sub">Scratch away the foil to uncover the hidden picture. You have 3 ❤️ — each ⚠️ bomb you scratch costs one. Clear 70% of the board to win the level.</p>
+
+      <div id="journey" class="journey">
+        <div class="journey-top">
+          <span id="chapterLabel">Chapter 1</span>
+          <span id="chestHint">🎁 in 5</span>
+        </div>
+        <div class="journey-track"><div id="journeyFill"></div></div>
+      </div>
+
       <button id="startBtn" class="btn btn-primary">Play</button>
+      <button id="dailyBtn" class="btn btn-daily hidden">🎁 Claim daily reward</button>
       <button id="howtoBtn" class="btn btn-ghost">How to play</button>
+
+      <div class="missions-block">
+        <div class="missions-head">🎯 Daily missions</div>
+        <div id="missionsList"></div>
+      </div>
+
       <div class="collection-block">
         <div class="collection-head">🖼️ Picture gallery · <span id="collectionCount">0/0</span></div>
         <div id="collectionRow" class="collection-row"></div>
@@ -79,12 +94,13 @@
   <!-- Level complete -->
   <div id="levelCompleteScreen" class="overlay hidden">
     <div class="overlay-card pop">
+      <div id="chestBadge" class="chest-badge hidden">🎁</div>
       <div id="starRow" class="star-row">
         <span class="star" data-i="0">★</span>
         <span class="star" data-i="1">★</span>
         <span class="star" data-i="2">★</span>
       </div>
-      <h2>Board Cleared!</h2>
+      <h2 id="lcTitle">Board Cleared!</h2>
       <p class="sub">Level <span id="clearedLevel"></span> complete<br>
         <span class="pts">+<span id="levelPoints"></span> pts</span>
         <span class="coins-earned">+<span id="levelCoins"></span> 🪙</span>

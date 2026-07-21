@@ -11,6 +11,8 @@ const STAR_TIMES = [30, 60];    // <=30s -> 3 stars, <=60s -> 2 stars, else 1
 const HINT_COST = 50;           // coins to spend on a hint instead of watching an ad
 const BONUS_COIN = 25;          // coins from a surprise bonus tile
 const LEVEL_COIN = 15;          // coins for clearing a level
+const CHEST_EVERY = 5;          // a chapter chest every N levels
+const DAILY_BASE = 40;          // base daily-reward coins (+streak bonus)
 const ENDOW_TILES = 4;          // head-start tiles pre-revealed (endowed progress effect)
 const NUDGE_REMAINING = 5;      // show "almost there" when this many safe tiles remain
 const GLOW_AT = 0.7;            // progress fraction where the goal-gradient glow kicks in
@@ -79,6 +81,14 @@ const levelCoinsEl = document.getElementById("levelCoins");
 const unlockNote = document.getElementById("unlockNote");
 const nearMissEl = document.getElementById("nearMiss");
 const resetBtn = document.getElementById("resetBtn");
+
+const journeyFill = document.getElementById("journeyFill");
+const chapterLabel = document.getElementById("chapterLabel");
+const chestHint = document.getElementById("chestHint");
+const dailyBtn = document.getElementById("dailyBtn");
+const missionsList = document.getElementById("missionsList");
+const chestBadge = document.getElementById("chestBadge");
+const lcTitle = document.getElementById("lcTitle");
 
 // ---------- Audio ----------
 const Sound = {
@@ -155,8 +165,111 @@ const state = {
   hasScratchedEver: localStorage.getItem("reveal.tutorialDone") === "1",
   collection: safeParse(localStorage.getItem("reveal.collection"), []),
   streak: 0,
+  missions: [],
   _lastScore: 0,
 };
+
+// ---------- Daily missions ----------
+const MISSION_POOL = [
+  { id: "clear3", type: "clearLevels", goal: 3, text: "Clear {goal} levels", reward: 40 },
+  { id: "clear6", type: "clearLevels", goal: 6, text: "Clear {goal} levels", reward: 80 },
+  { id: "bonus4", type: "findBonus", goal: 4, text: "Find {goal} bonus tiles", reward: 50 },
+  { id: "coins200", type: "earnCoins", goal: 200, text: "Earn {goal} coins", reward: 40 },
+  { id: "perfect2", type: "perfectClears", goal: 2, text: "Clear {goal} levels without losing a heart", reward: 90 },
+  { id: "chest1", type: "chests", goal: 1, text: "Open {goal} chapter chest", reward: 60 },
+];
+
+function today() { return new Date().toDateString(); }
+
+function loadMissions() {
+  const raw = safeParse(localStorage.getItem("reveal.missions"), null);
+  if (raw && raw.date === today() && Array.isArray(raw.list)) {
+    state.missions = raw.list;
+    return;
+  }
+  const pool = [...MISSION_POOL];
+  shuffle(pool);
+  state.missions = pool.slice(0, 2).map((m) => ({
+    id: m.id, type: m.type, goal: m.goal, reward: m.reward,
+    text: m.text.replace("{goal}", m.goal), progress: 0, claimed: false,
+  }));
+  saveMissions();
+}
+function saveMissions() {
+  localStorage.setItem("reveal.missions", JSON.stringify({ date: today(), list: state.missions }));
+}
+function progressMission(type, n = 1) {
+  let changed = false;
+  state.missions.forEach((m) => {
+    if (m.type === type && !m.claimed && m.progress < m.goal) {
+      m.progress = Math.min(m.goal, m.progress + n);
+      changed = true;
+    }
+  });
+  if (changed) saveMissions();
+}
+function claimMission(m) {
+  if (m.claimed || m.progress < m.goal) return;
+  m.claimed = true;
+  saveMissions();
+  addCoins(m.reward);
+  Sound.bonus();
+  renderMissions();
+}
+function renderMissions() {
+  missionsList.innerHTML = "";
+  state.missions.forEach((m) => {
+    const done = m.progress >= m.goal;
+    const row = document.createElement("div");
+    row.className = "mission " + (m.claimed ? "claimed" : done ? "ready" : "");
+    const pct = Math.min(100, Math.round((m.progress / m.goal) * 100));
+    const rewardLabel = m.claimed ? "✓ Claimed" : done ? `Claim +${m.reward} 🪙` : `${m.progress}/${m.goal}`;
+    row.innerHTML =
+      `<div class="mission-text">${m.text}</div>` +
+      `<div class="mission-bar"><div style="width:${pct}%"></div></div>` +
+      `<div class="mission-reward">${rewardLabel}</div>`;
+    if (done && !m.claimed) {
+      row.querySelector(".mission-reward").addEventListener("click", () => claimMission(m));
+    }
+    missionsList.appendChild(row);
+  });
+}
+
+// ---------- Daily reward ----------
+function dailyAvailable() { return localStorage.getItem("reveal.dailyClaim") !== today(); }
+function dailyAmount() { return DAILY_BASE + Math.min(state.streak, 7) * 10; }
+function renderDaily() {
+  if (dailyAvailable()) {
+    dailyBtn.textContent = `🎁 Daily reward · +${dailyAmount()} 🪙`;
+    dailyBtn.classList.remove("hidden", "claimed");
+    dailyBtn.disabled = false;
+  } else {
+    dailyBtn.textContent = "🎁 Daily reward claimed — come back tomorrow";
+    dailyBtn.classList.remove("hidden");
+    dailyBtn.classList.add("claimed");
+    dailyBtn.disabled = true;
+  }
+}
+dailyBtn.addEventListener("click", () => {
+  if (!dailyAvailable()) return;
+  Sound.init();
+  const amt = dailyAmount();
+  localStorage.setItem("reveal.dailyClaim", today());
+  addCoins(amt);
+  Sound.bonus();
+  renderDaily();
+});
+
+// ---------- Journey / chapters ----------
+function chapterOf(level) { return Math.floor((level - 1) / CHEST_EVERY) + 1; }
+function renderJourney() {
+  const level = Number(localStorage.getItem("reveal.level") || 1);
+  chapterLabel.textContent = `Chapter ${chapterOf(level)} · Level ${level}`;
+  const into = (level - 1) % CHEST_EVERY;
+  const toChest = CHEST_EVERY - into;
+  chestHint.textContent = toChest === 1 ? "🎁 next level!" : `🎁 in ${toChest}`;
+  journeyFill.style.width = (into / CHEST_EVERY) * 100 + "%";
+}
 
 function safeParse(s, fallback) { try { return s ? JSON.parse(s) : fallback; } catch (e) { return fallback; } }
 
@@ -470,6 +583,8 @@ function revealCell(r, c, combo) {
   // Variable-ratio surprise payout
   if (state.bonus[r][c]) {
     addCoins(BONUS_COIN);
+    progressMission("findBonus", 1);
+    progressMission("earnCoins", BONUS_COIN);
     popText(x, y - state.cellSize * 0.2, "+" + BONUS_COIN + " 🪙", "#ffcb47");
     burst(x, y, "#ffcb47", 16, state.cellSize * 0.12);
     Sound.bonus();
@@ -701,15 +816,25 @@ function maybeShowTutorial() {
 function triggerLevelComplete() {
   state.playing = false;
   goalNudge.classList.add("hidden");
+  const isChest = state.level % CHEST_EVERY === 0;      // chapter milestone
+  const perfect = state.hearts === MAX_HEARTS;          // cleared without a hit
+
   const bonus = 50 * state.level;
   state.score += bonus;
   if (state.score > state.best) { state.best = state.score; localStorage.setItem("reveal.best", String(state.best)); }
 
-  // reward coins (peak-end rule: end the level on a high, tangible payoff)
-  const coinReward = LEVEL_COIN + 3 * state.level;
+  // reward coins (peak-end rule). Chapter chests pay a jackpot.
+  const coinReward = isChest ? (80 + 15 * state.level) : (LEVEL_COIN + 3 * state.level);
   addCoins(coinReward);
 
+  // daily-mission progress
+  progressMission("clearLevels", 1);
+  progressMission("earnCoins", coinReward);
+  if (perfect) progressMission("perfectClears", 1);
+  if (isChest) progressMission("chests", 1);
+
   confetti();
+  if (isChest) setTimeout(confetti, 260);
   flashLayer.className = "flash-win";
   Sound.win();
   haptic([30, 40, 60]);
@@ -717,14 +842,23 @@ function triggerLevelComplete() {
   const secs = (performance.now() - state.levelStart) / 1000;
   const stars = secs <= STAR_TIMES[0] ? 3 : secs <= STAR_TIMES[1] ? 2 : 1;
 
-  // Collection / completionism: record the picture uncovered this level
-  const newlyFound = !state.collection.includes(state.scene.emoji);
-  if (newlyFound) {
-    state.collection.push(state.scene.emoji);
-    localStorage.setItem("reveal.collection", JSON.stringify(state.collection));
+  // Collection / completionism: record this level's picture; a chest guarantees
+  // a brand-new one even if this level's picture was already owned.
+  let newlyFound = !state.collection.includes(state.scene.emoji);
+  if (newlyFound) state.collection.push(state.scene.emoji);
+  if (isChest && !newlyFound) {
+    const locked = SCENES.map((s) => s.emoji).filter((e) => !state.collection.includes(e));
+    if (locked.length) { state.collection.push(locked[Math.floor(Math.random() * locked.length)]); newlyFound = true; }
   }
+  if (newlyFound) localStorage.setItem("reveal.collection", JSON.stringify(state.collection));
+
+  // chest vs normal presentation
+  chestBadge.classList.toggle("hidden", !isChest);
+  lcTitle.textContent = isChest ? `Chapter ${chapterOf(state.level)} Cleared! 🎁` : "Board Cleared!";
+
   if (newlyFound) {
-    unlockNote.textContent = `✨ New picture unlocked! ${state.scene.emoji}  (${state.collection.length}/${SCENES.length})`;
+    const shown = state.collection[state.collection.length - 1];
+    unlockNote.textContent = `✨ New picture unlocked! ${shown}  (${state.collection.length}/${SCENES.length})`;
     unlockNote.classList.remove("hidden");
   } else {
     unlockNote.classList.add("hidden");
@@ -930,15 +1064,20 @@ function renderMenu() {
     div.textContent = found ? s.emoji : "❓";
     collectionRow.appendChild(div);
   });
+  renderJourney();
+  renderDaily();
+  renderMissions();
 }
 
 resetBtn.addEventListener("click", () => {
   if (!window.confirm("Reset all progress — coins, best score, streak and gallery?")) return;
-  ["reveal.best", "reveal.coins", "reveal.collection", "reveal.streak", "reveal.lastPlayed", "reveal.gameOverCount", "reveal.level"]
+  ["reveal.best", "reveal.coins", "reveal.collection", "reveal.streak", "reveal.lastPlayed",
+   "reveal.gameOverCount", "reveal.level", "reveal.missions", "reveal.dailyClaim"]
     .forEach((k) => localStorage.removeItem(k));
   state.best = 0; state.coins = 0; state.collection = []; state.gameOverCount = 0; state.level = 1;
   hudBest.textContent = "0"; hudCoins.textContent = "0";
   computeStreak();
+  loadMissions();
   renderMenu();
   refreshHintButton();
   hide(settingsScreen);
@@ -948,6 +1087,7 @@ resetBtn.addEventListener("click", () => {
 // ---------- Boot ----------
 setSound(Sound.enabled);
 computeStreak();
+loadMissions();
 renderMenu();
 refreshHintButton();
 window.addEventListener("resize", () => {

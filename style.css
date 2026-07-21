@@ -491,3 +491,115 @@ body {
   margin-bottom: 14px;
   min-height: 24px;
 }
+
+/* ============ v1.4 progression + daily hooks ============ */
+
+/* keep tall menus usable on short screens */
+.overlay-card { max-height: 88vh; overflow-y: auto; }
+
+/* Journey / chapter progress */
+.journey {
+  background: var(--panel-2);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.journey-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.journey-top #chapterLabel { color: var(--text); }
+.journey-top #chestHint { color: var(--accent-2); }
+.journey-track {
+  height: 8px;
+  background: #0e0f16;
+  border-radius: 5px;
+  overflow: hidden;
+}
+#journeyFill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+/* Daily reward button */
+.btn-daily {
+  background: linear-gradient(180deg, #ffd25a, #f6a609);
+  color: #3a2600;
+  box-shadow: 0 8px 18px rgba(246,166,9,0.3);
+  animation: dailyPulse 1.4s ease-in-out infinite;
+}
+.btn-daily.hidden { display: none; }
+@keyframes dailyPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+.btn-daily.claimed {
+  background: var(--panel-2);
+  color: var(--muted);
+  box-shadow: none;
+  animation: none;
+}
+
+/* Daily missions */
+.missions-block { margin-top: 20px; text-align: left; }
+.missions-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.mission {
+  background: var(--panel-2);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.mission-text { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.mission-bar {
+  height: 6px;
+  background: #0e0f16;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.mission-bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.mission-reward {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  text-align: right;
+}
+.mission.ready .mission-reward {
+  color: #3a2600;
+  background: var(--accent-2);
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  float: right;
+  animation: dailyPulse 1.2s ease-in-out infinite;
+}
+.mission.claimed { opacity: 0.55; }
+.mission.claimed .mission-reward { color: var(--accent); }
+
+/* Chapter chest on level complete */
+.chest-badge {
+  font-size: 54px;
+  margin-bottom: 6px;
+  display: inline-block;
+  animation: chestPop 0.5s cubic-bezier(.2,1.5,.4,1) both;
+}
+.chest-badge.hidden { display: none; }
+@keyframes chestPop { 0% { transform: scale(0) rotate(-20deg); } 100% { transform: scale(1) rotate(0); } }
