@@ -17,19 +17,21 @@ const ENDOW_TILES = 4;          // head-start tiles pre-revealed (endowed progre
 const NUDGE_REMAINING = 5;      // show "almost there" when this many safe tiles remain
 const GLOW_AT = 0.7;            // progress fraction where the goal-gradient glow kicks in
 
+// Each scene's picture is drawn as a flat vector illustration (see MOTIFS),
+// not an emoji — consistent, crisp, and on-brand across every platform.
 const SCENES = [
-  { emoji: "🐱", bg: ["#ff9a9e", "#fecfef"], deco: "#ffffff" },
-  { emoji: "🚀", bg: ["#4facfe", "#00f2fe"], deco: "#ffffff" },
-  { emoji: "🌈", bg: ["#a18cd1", "#fbc2eb"], deco: "#fff6b7" },
-  { emoji: "🍩", bg: ["#f6d365", "#fda085"], deco: "#ffffff" },
-  { emoji: "🦊", bg: ["#f77062", "#fe5196"], deco: "#ffe29a" },
-  { emoji: "🐳", bg: ["#2af598", "#009efd"], deco: "#ffffff" },
-  { emoji: "🎈", bg: ["#ff6a88", "#ff99ac"], deco: "#ffffff" },
-  { emoji: "🌻", bg: ["#fceabb", "#f8b500"], deco: "#ffffff" },
-  { emoji: "🍉", bg: ["#43e97b", "#38f9d7"], deco: "#ffffff" },
-  { emoji: "🐢", bg: ["#0ba360", "#3cba92"], deco: "#f0fff4" },
-  { emoji: "💎", bg: ["#a1c4fd", "#c2e9fb"], deco: "#ffffff" },
-  { emoji: "🦄", bg: ["#fbc2eb", "#a6c1ee"], deco: "#ffffff" },
+  { motif: "sun",     bg: ["#ffd76a", "#ff8f3d"] },
+  { motif: "star",    bg: ["#8f7bff", "#4d3fd0"] },
+  { motif: "heart",   bg: ["#ff8fab", "#ff5f7e"] },
+  { motif: "diamond", bg: ["#5fdcea", "#2f8fd6"] },
+  { motif: "flower",  bg: ["#9be86e", "#34a866"] },
+  { motif: "moon",    bg: ["#46579c", "#232a5c"] },
+  { motif: "rocket",  bg: ["#8fb0ff", "#5566e6"] },
+  { motif: "balloon", bg: ["#ffa06e", "#ff6f91"] },
+  { motif: "rainbow", bg: ["#79ccff", "#3a8fe0"] },
+  { motif: "cloud",   bg: ["#84bbff", "#4f8fe0"] },
+  { motif: "planet",  bg: ["#6a5fe0", "#3a2f8c"] },
+  { motif: "bolt",    bg: ["#ffd76a", "#ffa93d"] },
 ];
 
 // ---------- DOM ----------
@@ -223,7 +225,7 @@ function renderMissions() {
     const row = document.createElement("div");
     row.className = "mission " + (m.claimed ? "claimed" : done ? "ready" : "");
     const pct = Math.min(100, Math.round((m.progress / m.goal) * 100));
-    const rewardLabel = m.claimed ? "✓ Claimed" : done ? `Claim +${m.reward} 🪙` : `${m.progress}/${m.goal}`;
+    const rewardLabel = m.claimed ? "✓ Claimed" : done ? `Claim +${m.reward} ` + icon("coin", "15px") : `${m.progress}/${m.goal}`;
     row.innerHTML =
       `<div class="mission-text">${m.text}</div>` +
       `<div class="mission-bar"><div style="width:${pct}%"></div></div>` +
@@ -240,11 +242,11 @@ function dailyAvailable() { return localStorage.getItem("reveal.dailyClaim") !==
 function dailyAmount() { return DAILY_BASE + Math.min(state.streak, 7) * 10; }
 function renderDaily() {
   if (dailyAvailable()) {
-    dailyBtn.textContent = `🎁 Daily reward · +${dailyAmount()} 🪙`;
+    dailyBtn.innerHTML = icon("gift", "20px") + ` Daily reward · +${dailyAmount()} ` + icon("coin", "18px");
     dailyBtn.classList.remove("hidden", "claimed");
     dailyBtn.disabled = false;
   } else {
-    dailyBtn.textContent = "🎁 Daily reward claimed — come back tomorrow";
+    dailyBtn.innerHTML = icon("gift", "18px") + " Claimed — come back tomorrow";
     dailyBtn.classList.remove("hidden");
     dailyBtn.classList.add("claimed");
     dailyBtn.disabled = true;
@@ -267,7 +269,7 @@ function renderJourney() {
   chapterLabel.textContent = `Chapter ${chapterOf(level)} · Level ${level}`;
   const into = (level - 1) % CHEST_EVERY;
   const toChest = CHEST_EVERY - into;
-  chestHint.textContent = toChest === 1 ? "🎁 next level!" : `🎁 in ${toChest}`;
+  chestHint.innerHTML = icon("gift", "16px") + (toChest === 1 ? " next level!" : ` in ${toChest}`);
   journeyFill.style.width = (into / CHEST_EVERY) * 100 + "%";
 }
 
@@ -278,8 +280,8 @@ hudCoins.textContent = state.coins;
 
 function renderHearts() {
   let s = "";
-  for (let i = 0; i < MAX_HEARTS; i++) s += i < state.hearts ? "❤️" : "🖤";
-  heartsRow.textContent = s;
+  for (let i = 0; i < MAX_HEARTS; i++) s += icon(i < state.hearts ? "heartFull" : "heartEmpty", "28px");
+  heartsRow.innerHTML = s;
 }
 
 function addCoins(n) {
@@ -360,6 +362,203 @@ function makeCoverTile() {
   coverTile = c;
 }
 makeCoverTile();
+
+// ---------- Flat vector picture motifs (drawn on canvas, not emoji) ----------
+function _star(g, cx, cy, spikes, outer, inner, rot) {
+  g.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const rad = i % 2 === 0 ? outer : inner;
+    const a = rot + (Math.PI * i) / spikes;
+    const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad;
+    if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+  }
+  g.closePath();
+}
+function _circle(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); }
+function _fillStroke(g, fill, stroke, lw) {
+  g.fillStyle = fill; g.fill();
+  if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+}
+
+const MOTIFS = {
+  sun(g, cx, cy, R) {
+    for (let i = 0; i < 12; i++) {
+      g.save(); g.translate(cx, cy); g.rotate(i * Math.PI / 6);
+      g.beginPath(); g.moveTo(-R * 0.1, -R * 0.74); g.lineTo(R * 0.1, -R * 0.74); g.lineTo(0, -R * 1.06); g.closePath();
+      g.fillStyle = "#ffe07a"; g.fill(); g.restore();
+    }
+    _circle(g, cx, cy, R * 0.64); _fillStroke(g, "#ffcf3f", "#e8892b", R * 0.075);
+    _circle(g, cx - R * 0.22, cy - R * 0.22, R * 0.2); g.fillStyle = "rgba(255,255,255,0.55)"; g.fill();
+  },
+  star(g, cx, cy, R) {
+    _star(g, cx, cy, 5, R, R * 0.44, -Math.PI / 2); _fillStroke(g, "#ffd54a", "#e0a21e", R * 0.08);
+    _star(g, cx - R * 0.06, cy - R * 0.06, 5, R * 0.6, R * 0.26, -Math.PI / 2);
+    g.fillStyle = "rgba(255,255,255,0.4)"; g.fill();
+  },
+  heart(g, cx, cy, R) {
+    g.beginPath();
+    const t = cy - R * 0.35;
+    g.moveTo(cx, cy + R * 0.75);
+    g.bezierCurveTo(cx - R * 1.15, cy - R * 0.1, cx - R * 0.55, t - R * 0.6, cx, t);
+    g.bezierCurveTo(cx + R * 0.55, t - R * 0.6, cx + R * 1.15, cy - R * 0.1, cx, cy + R * 0.75);
+    g.closePath(); _fillStroke(g, "#ff5d73", "#d63753", R * 0.08);
+    g.beginPath(); g.ellipse(cx - R * 0.32, cy - R * 0.28, R * 0.16, R * 0.24, -0.5, 0, Math.PI * 2);
+    g.fillStyle = "rgba(255,255,255,0.55)"; g.fill();
+  },
+  diamond(g, cx, cy, R) {
+    const top = cy - R * 0.7, mid = cy - R * 0.28, bot = cy + R * 0.9, w = R * 0.9, tw = R * 0.5;
+    g.beginPath();
+    g.moveTo(cx - tw, top); g.lineTo(cx + tw, top); g.lineTo(cx + w, mid);
+    g.lineTo(cx, bot); g.lineTo(cx - w, mid); g.closePath();
+    _fillStroke(g, "#7fe6f2", "#2f8fd6", R * 0.075);
+    g.beginPath(); g.moveTo(cx - tw, top); g.lineTo(cx + tw, top); g.lineTo(cx + tw * 0.5, mid); g.lineTo(cx - tw * 0.5, mid); g.closePath();
+    g.fillStyle = "rgba(255,255,255,0.5)"; g.fill();
+    g.strokeStyle = "rgba(47,143,214,0.6)"; g.lineWidth = R * 0.04;
+    g.beginPath(); g.moveTo(cx - w, mid); g.lineTo(cx + w, mid); g.moveTo(cx - tw * 0.5, mid); g.lineTo(cx, bot); g.moveTo(cx + tw * 0.5, mid); g.lineTo(cx, bot); g.stroke();
+  },
+  flower(g, cx, cy, R) {
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      const px = cx + Math.cos(a) * R * 0.6, py = cy + Math.sin(a) * R * 0.6;
+      _circle(g, px, py, R * 0.36); _fillStroke(g, "#ff9ecb", "#e0679f", R * 0.05);
+    }
+    _circle(g, cx, cy, R * 0.42); _fillStroke(g, "#ffd54a", "#e0a21e", R * 0.06);
+  },
+  moon(g, cx, cy, R) {
+    g.save();
+    g.beginPath(); g.arc(cx + R * 0.15, cy, R * 0.85, 0, Math.PI * 2); g.closePath();
+    _fillStroke(g, "#ffe98c", "#e8c24a", R * 0.07);
+    g.globalCompositeOperation = "destination-out";
+    g.beginPath(); g.arc(cx + R * 0.55, cy - R * 0.15, R * 0.72, 0, Math.PI * 2); g.fill();
+    g.restore();
+    for (const [dx, dy, r] of [[R * 0.7, -R * 0.6, R * 0.12], [R * 0.95, R * 0.1, R * 0.08], [R * 0.5, R * 0.7, R * 0.1]]) {
+      _star(g, cx + dx, cy + dy, 4, r, r * 0.4, 0); g.fillStyle = "#fff3b0"; g.fill();
+    }
+  },
+  rocket(g, cx, cy, R) {
+    g.beginPath();
+    g.moveTo(cx, cy - R); g.bezierCurveTo(cx + R * 0.6, cy - R * 0.5, cx + R * 0.5, cy + R * 0.4, cx + R * 0.3, cy + R * 0.6);
+    g.lineTo(cx - R * 0.3, cy + R * 0.6); g.bezierCurveTo(cx - R * 0.5, cy + R * 0.4, cx - R * 0.6, cy - R * 0.5, cx, cy - R);
+    g.closePath(); _fillStroke(g, "#eef2ff", "#8f9bd0", R * 0.06);
+    g.beginPath(); g.moveTo(cx - R * 0.3, cy + R * 0.35); g.lineTo(cx - R * 0.62, cy + R * 0.72); g.lineTo(cx - R * 0.28, cy + R * 0.62); g.closePath();
+    g.moveTo(cx + R * 0.3, cy + R * 0.35); g.lineTo(cx + R * 0.62, cy + R * 0.72); g.lineTo(cx + R * 0.28, cy + R * 0.62); g.closePath();
+    _fillStroke(g, "#ff5d73", "#d63753", R * 0.05);
+    _circle(g, cx, cy - R * 0.15, R * 0.22); _fillStroke(g, "#7fd6ff", "#2f8fd6", R * 0.05);
+    g.beginPath(); g.moveTo(cx - R * 0.16, cy + R * 0.62); g.lineTo(cx + R * 0.16, cy + R * 0.62); g.lineTo(cx, cy + R * 1.05); g.closePath();
+    g.fillStyle = "#ffb03a"; g.fill();
+  },
+  balloon(g, cx, cy, R) {
+    g.beginPath(); g.ellipse(cx, cy - R * 0.1, R * 0.7, R * 0.82, 0, 0, Math.PI * 2);
+    _fillStroke(g, "#ff6f91", "#d63f63", R * 0.06);
+    g.beginPath(); g.moveTo(cx - R * 0.12, cy + R * 0.7); g.lineTo(cx + R * 0.12, cy + R * 0.7); g.lineTo(cx, cy + R * 0.86); g.closePath();
+    g.fillStyle = "#d63f63"; g.fill();
+    g.beginPath(); g.moveTo(cx, cy + R * 0.86); g.quadraticCurveTo(cx + R * 0.3, cy + R * 1.1, cx, cy + R * 1.35);
+    g.strokeStyle = "#ffffff"; g.lineWidth = R * 0.05; g.stroke();
+    g.beginPath(); g.ellipse(cx - R * 0.24, cy - R * 0.32, R * 0.14, R * 0.24, -0.5, 0, Math.PI * 2);
+    g.fillStyle = "rgba(255,255,255,0.5)"; g.fill();
+  },
+  rainbow(g, cx, cy, R) {
+    const cols = ["#ff6b6b", "#ffb03a", "#ffe24a", "#4fd67a", "#4facfe", "#9b6bff"];
+    g.lineWidth = R * 0.16; g.lineCap = "round";
+    cols.forEach((col, i) => { g.strokeStyle = col; g.beginPath(); g.arc(cx, cy + R * 0.4, R * 0.95 - i * R * 0.17, Math.PI, 0); g.stroke(); });
+    for (const dx of [-R * 0.85, R * 0.85]) {
+      _circle(g, cx + dx, cy + R * 0.5, R * 0.26); g.fillStyle = "#fff"; g.fill();
+      _circle(g, cx + dx + R * 0.22, cy + R * 0.5, R * 0.2); g.fill();
+    }
+  },
+  cloud(g, cx, cy, R) {
+    _circle(g, cx - R * 0.5, cy, R * 0.42);
+    _circle(g, cx + R * 0.5, cy, R * 0.42);
+    _circle(g, cx - R * 0.1, cy - R * 0.32, R * 0.44);
+    g.beginPath(); g.rect(cx - R * 0.5, cy - R * 0.05, R, R * 0.45);
+    g.fillStyle = "#ffffff"; g.fill();
+    g.beginPath(); g.arc(cx - R * 0.5, cy, R * 0.42, 0, Math.PI * 2); g.arc(cx + R * 0.5, cy, R * 0.42, 0, Math.PI * 2);
+    g.arc(cx - R * 0.1, cy - R * 0.32, R * 0.44, 0, Math.PI * 2); g.fill();
+    for (const dx of [-R * 0.35, R * 0.05, R * 0.45]) {
+      g.strokeStyle = "#7fb6ff"; g.lineWidth = R * 0.1; g.lineCap = "round";
+      g.beginPath(); g.moveTo(cx + dx, cy + R * 0.5); g.lineTo(cx + dx - R * 0.1, cy + R * 0.85); g.stroke();
+    }
+  },
+  planet(g, cx, cy, R) {
+    g.save();
+    g.strokeStyle = "#ffd76a"; g.lineWidth = R * 0.12;
+    g.beginPath(); g.ellipse(cx, cy, R * 1.05, R * 0.4, -0.35, 0, Math.PI * 2); g.stroke();
+    _circle(g, cx, cy, R * 0.62); _fillStroke(g, "#8f7bff", "#5b4fd6", R * 0.06);
+    g.save(); _circle(g, cx, cy, R * 0.62); g.clip();
+    g.fillStyle = "rgba(255,255,255,0.35)"; _circle(g, cx - R * 0.25, cy - R * 0.2, R * 0.16); g.fill();
+    _circle(g, cx + R * 0.2, cy + R * 0.15, R * 0.12); g.fill(); g.restore();
+    g.strokeStyle = "#ffd76a"; g.lineWidth = R * 0.12;
+    g.beginPath(); g.ellipse(cx, cy, R * 1.05, R * 0.4, -0.35, Math.PI * 0.15, Math.PI * 0.85); g.stroke();
+    g.restore();
+  },
+  bolt(g, cx, cy, R) {
+    g.beginPath();
+    g.moveTo(cx + R * 0.15, cy - R); g.lineTo(cx - R * 0.5, cy + R * 0.12); g.lineTo(cx - R * 0.02, cy + R * 0.12);
+    g.lineTo(cx - R * 0.2, cy + R); g.lineTo(cx + R * 0.55, cy - R * 0.2); g.lineTo(cx + R * 0.05, cy - R * 0.2);
+    g.closePath(); _fillStroke(g, "#ffd54a", "#e8a41e", R * 0.07);
+  },
+};
+
+// ---------- Inline SVG icon set (replaces all UI emoji) ----------
+const ICON_SVG = {
+  gear: '<path fill="currentColor" d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm8.9 3.5c0-.5 0-.9-.1-1.3l1.9-1.5-2-3.4-2.3 1a7 7 0 00-2.2-1.3L15.7 3H8.3l-.4 2.5A7 7 0 005.7 6.8l-2.3-1-2 3.4L3.2 10.7c-.1.4-.1.8-.1 1.3s0 .9.1 1.3l-1.9 1.5 2 3.4 2.3-1a7 7 0 002.2 1.3l.4 2.5h7.4l.4-2.5a7 7 0 002.2-1.3l2.3 1 2-3.4-1.9-1.5c.1-.4.1-.8.1-1.3z"/>',
+  volumeOn: '<path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/>',
+  volumeOff: '<path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M17 9.5l5 5M22 9.5l-5 5"/>',
+  coin: '<circle cx="12" cy="12" r="10" fill="#e39a0c"/><circle cx="12" cy="12" r="7.2" fill="#ffd54a"/><path fill="#c9820a" d="M12 7.5c-2 0-3.3 1-3.3 2.4 0 3 5.1 1.7 5.1 3.6 0 .7-.7 1.1-1.8 1.1-1 0-1.7-.4-1.9-1.1H8.7c.1 1.3 1.1 2.2 2.6 2.4V19h1.4v-1.6c1.7-.2 2.8-1.1 2.8-2.6 0-3-5.1-1.8-5.1-3.6 0-.6.6-1 1.6-1 .9 0 1.5.4 1.6 1h1.4c-.1-1.2-1-2.1-2.3-2.3V5.5h-1.4v2z"/><circle cx="9.3" cy="9" r="1.6" fill="rgba(255,255,255,0.55)"/>',
+  gift: '<rect x="3.5" y="10.5" width="17" height="10.5" rx="1.6" fill="#ff8f3d"/><rect x="2.5" y="7" width="19" height="4.5" rx="1.2" fill="#ffb03a"/><rect x="10.3" y="7" width="3.4" height="14" fill="#e05a2b"/><circle cx="8.6" cy="6" r="2.4" fill="#ff5d73"/><circle cx="15.4" cy="6" r="2.4" fill="#ff5d73"/>',
+  flame: '<path fill="#ff7a3d" d="M13 2c1.2 3.2-2.2 4.5-2.2 7.6 0 1 .6 1.7 1.2 1.7-.4-1.4.6-2.6 1.2-2.6-.2 2.4 2.8 3 2.8 5.6a4.6 4.6 0 11-9.2 0c0-3.6 4-4.4 4-8 0-1.6-.4-2.6.4-4.3.6.4 1.4 1.2 1.8 2z"/><path fill="#ffce4d" d="M12 12.5c1.8 0 2.8 1.4 2.8 3a2.8 2.8 0 11-5.6 0c0-1.2.8-1.8 1.4-2.6.3.8 1 1.3 1.4.6 0-.4 0-.7 0-1z"/>',
+  target: '<circle cx="12" cy="12" r="10" fill="#ff4d5e"/><circle cx="12" cy="12" r="6.6" fill="#fff"/><circle cx="12" cy="12" r="3.4" fill="#ff4d5e"/><circle cx="12" cy="12" r="1.2" fill="#fff"/>',
+  sparkle: '<path fill="#ffd54a" d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"/><path fill="#ffe98c" d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/>',
+  pointer: '<path fill="#fff" stroke="#2b2740" stroke-width="1.2" stroke-linejoin="round" d="M8 3.5l0 12 2.8-2.6 1.8 4.6 2.4-1-1.9-4.5 3.7-.2z"/>',
+  images: '<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="10" r="1.8" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M5 17l4.5-4 3 2.6L16 12l3 3.6"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="9.5" rx="2.4" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2.2" d="M8 10.5V8a4 4 0 018 0v2.5"/>',
+  heartFull: '<path fill="#ff4d63" stroke="#d63753" stroke-width="1.3" d="M12 20.5C4.5 15 3 11.5 3 8.7 3 6 5 4.2 7.4 4.2c1.7 0 3.3 1 4.6 2.7 1.3-1.7 2.9-2.7 4.6-2.7C19 4.2 21 6 21 8.7c0 2.8-1.5 6.3-9 11.8z"/><path fill="rgba(255,255,255,0.45)" d="M8 7.2c-1 0-1.9.7-2.2 1.8"/>',
+  heartEmpty: '<path fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.3)" stroke-width="1.3" d="M12 20.5C4.5 15 3 11.5 3 8.7 3 6 5 4.2 7.4 4.2c1.7 0 3.3 1 4.6 2.7 1.3-1.7 2.9-2.7 4.6-2.7C19 4.2 21 6 21 8.7c0 2.8-1.5 6.3-9 11.8z"/>',
+  burst: '<path fill="#ff7a3d" stroke="#e0492b" stroke-width="1.2" stroke-linejoin="round" d="M12 2l2.2 4.3 4.4-1.9-1.9 4.4L21 11l-4.3 2.2 1.9 4.4-4.4-1.9L12 20l-2.2-4.3-4.4 1.9 1.9-4.4L3 11l4.3-2.2-1.9-4.4 4.4 1.9z"/><circle cx="12" cy="11" r="2.6" fill="#ffce4d"/>',
+};
+function icon(name, size, cls) {
+  const s = size || "1em";
+  return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" width="${s}" height="${s}" style="display:inline-block;vertical-align:-0.18em" aria-hidden="true">${ICON_SVG[name] || ""}</svg>`;
+}
+function injectStaticIcons() {
+  document.querySelectorAll("[data-icon]").forEach((el) => {
+    const sz = el.getAttribute("data-icon-size") || "1em";
+    el.innerHTML = icon(el.getAttribute("data-icon"), sz);
+  });
+}
+
+const BODY_FONT = '"SF Pro Rounded", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif';
+
+function drawCoinGlyph(cx, cy, r) {
+  _circle(ctx, cx, cy, r); ctx.fillStyle = "#e39a0c"; ctx.fill();
+  _circle(ctx, cx, cy, r * 0.78); ctx.fillStyle = "#ffd54a"; ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.6)"; _circle(ctx, cx - r * 0.26, cy - r * 0.28, r * 0.2); ctx.fill();
+}
+function drawHeartGlyph(cx, cy, r, color) {
+  ctx.beginPath();
+  const t = cy - r * 0.3;
+  ctx.moveTo(cx, cy + r * 0.72);
+  ctx.bezierCurveTo(cx - r * 1.12, cy - r * 0.1, cx - r * 0.5, t - r * 0.62, cx, t);
+  ctx.bezierCurveTo(cx + r * 0.5, t - r * 0.62, cx + r * 1.12, cy - r * 0.1, cx, cy + r * 0.72);
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+
+// render a motif to a standalone canvas (for the gallery thumbnails)
+function motifThumb(motif, bg, px) {
+  const c = document.createElement("canvas");
+  c.width = c.height = px * 2;
+  const g = c.getContext("2d");
+  g.scale(2, 2);
+  const grad = g.createLinearGradient(0, 0, px, px);
+  grad.addColorStop(0, bg[0]); grad.addColorStop(1, bg[1]);
+  g.fillStyle = grad;
+  roundRectPath(g, 0, 0, px, px, px * 0.24); g.fill();
+  g.save(); g.translate(0, 0);
+  g.lineJoin = "round";
+  (MOTIFS[motif] || MOTIFS.star)(g, px / 2, px / 2, px * 0.26);
+  g.restore();
+  return c.toDataURL();
+}
 
 function sizeBoard() {
   const avail = Math.min(boardWrap.parentElement.clientWidth, 440);
@@ -485,7 +684,7 @@ function composeHidden() {
   // decorative concentric rings
   g.save();
   g.globalAlpha = 0.13;
-  g.strokeStyle = state.scene.deco;
+  g.strokeStyle = "#ffffff";
   g.lineWidth = P * 0.018;
   for (let i = 1; i <= 3; i++) {
     g.beginPath();
@@ -498,7 +697,7 @@ function composeHidden() {
   g.save();
   for (let i = 0; i < 10; i++) {
     g.globalAlpha = 0.1 + Math.random() * 0.13;
-    g.fillStyle = state.scene.deco;
+    g.fillStyle = "#ffffff";
     const r = P * (0.02 + Math.random() * 0.06);
     g.beginPath();
     g.arc(Math.random() * P, Math.random() * P, r, 0, Math.PI * 2);
@@ -513,15 +712,13 @@ function composeHidden() {
   g.fillStyle = spot;
   g.fillRect(0, 0, P, P);
 
-  // subject with a soft drop shadow
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.font = `${Math.floor(P * 0.46)}px serif`;
+  // subject: a drawn flat illustration with a soft drop shadow
   g.save();
-  g.shadowColor = "rgba(0,0,0,0.32)";
-  g.shadowBlur = P * 0.03;
-  g.shadowOffsetY = P * 0.015;
-  g.fillText(state.scene.emoji, P / 2, P / 2 + P * 0.02);
+  g.lineJoin = "round";
+  g.shadowColor = "rgba(0,0,0,0.28)";
+  g.shadowBlur = P * 0.035;
+  g.shadowOffsetY = P * 0.02;
+  (MOTIFS[state.scene.motif] || MOTIFS.star)(g, P / 2, P / 2, P * 0.26);
   g.restore();
 
   // vignette
@@ -551,10 +748,10 @@ function burst(x, y, color, count, spread) {
   }
 }
 
-// floating text popups ("+25 🪙", etc.) drawn in the render loop
+// floating reward popups drawn in the render loop (text + optional drawn icon)
 let popups = [];
-function popText(x, y, text, color) {
-  popups.push({ x, y, text, color, life: 1 });
+function popText(x, y, text, color, icon) {
+  popups.push({ x, y, text, color, icon: icon || null, life: 1 });
 }
 
 function confetti() {
@@ -592,7 +789,7 @@ function updateHud() {
   // Zeigarnik / goal-gradient nudge: surface exactly how few tiles remain
   const remaining = Math.max(0, threshold - state.revealedCount);
   if (state.playing && remaining > 0 && remaining <= NUDGE_REMAINING) {
-    goalNudge.textContent = `🔥 Almost! ${remaining} to go`;
+    goalNudge.innerHTML = icon("flame", "15px") + ` Almost! ${remaining} to go`;
     goalNudge.classList.remove("hidden");
   } else {
     goalNudge.classList.add("hidden");
@@ -636,7 +833,7 @@ function revealCell(r, c, combo) {
       haptic([50, 30, 80]);
       flashLayer.className = "flash-bomb";
       setTimeout(() => { flashLayer.className = ""; }, 400);
-      popText(x, y - state.cellSize * 0.2, "-1 ❤️", "#ff5470");
+      popText(x, y - state.cellSize * 0.2, "-1", "#ff9db0", "heart");
     }
     return true;
   }
@@ -652,7 +849,7 @@ function revealCell(r, c, combo) {
     addCoins(BONUS_COIN);
     progressMission("findBonus", 1);
     progressMission("earnCoins", BONUS_COIN);
-    popText(x, y - state.cellSize * 0.2, "+" + BONUS_COIN + " 🪙", "#ffcb47");
+    popText(x, y - state.cellSize * 0.2, "+" + BONUS_COIN, "#ffe07a", "coin");
     burst(x, y, "#ffcb47", 16, state.cellSize * 0.12);
     Sound.bonus();
     haptic(20);
@@ -775,15 +972,12 @@ function frame(now) {
       // visible bomb warning so the player can scratch around it
       if (!revealed && state.bomb[r][c]) {
         const pulse = 0.7 + 0.3 * Math.sin(now / 260);
-        ctx.globalAlpha = 0.55 * pulse;
+        ctx.globalAlpha = 0.4 + 0.35 * pulse;
         ctx.fillStyle = "#ff2b45";
         roundRectPath(ctx, ox, oy, sz, sz, tileR);
         ctx.fill();
         ctx.globalAlpha = 1;
-        ctx.font = `${cs * 0.5}px serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("⚠️", x + cs / 2, y + cs / 2 + cs * 0.02);
+        drawWarningGlyph(x + cs / 2, y + cs / 2, cs * 0.24);
       }
 
       if (revealed) {
@@ -829,14 +1023,19 @@ function frame(now) {
     p.y -= 0.6 * dt;
     if (p.life <= 0) { popups.splice(i, 1); continue; }
     ctx.globalAlpha = Math.min(1, p.life * 1.5);
-    ctx.font = "800 20px -apple-system, sans-serif";
-    ctx.textAlign = "center";
+    ctx.font = "900 21px " + BODY_FONT;
     ctx.textBaseline = "middle";
-    ctx.lineWidth = 3;
+    const iconW = p.icon ? 22 : 0;
+    ctx.textAlign = "left";
+    const tw = ctx.measureText(p.text).width;
+    const startX = p.x - (tw + iconW) / 2;
+    ctx.lineWidth = 3.5;
     ctx.strokeStyle = "rgba(0,0,0,0.5)";
-    ctx.strokeText(p.text, p.x, p.y);
+    ctx.strokeText(p.text, startX, p.y);
     ctx.fillStyle = p.color;
-    ctx.fillText(p.text, p.x, p.y);
+    ctx.fillText(p.text, startX, p.y);
+    if (p.icon === "coin") drawCoinGlyph(startX + tw + 12, p.y, 9);
+    else if (p.icon === "heart") drawHeartGlyph(startX + tw + 12, p.y, 9, "#ff5d73");
   }
   ctx.globalAlpha = 1;
 
@@ -851,15 +1050,30 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
+// white exclamation glyph for the danger tiles (no emoji)
+function drawWarningGlyph(cx, cy, r) {
+  ctx.fillStyle = "#ffffff";
+  roundRectPath(ctx, cx - r * 0.22, cy - r, r * 0.44, r * 1.35, r * 0.22);
+  ctx.fill();
+  _circle(ctx, cx, cy + r * 0.72, r * 0.28);
+  ctx.fill();
+}
+
+// drawn bomb for a detonated tile
 function drawBomb(x, y, cs) {
   const inset = Math.max(1, cs * 0.06);
-  ctx.fillStyle = "rgba(255,64,92,0.92)";
+  ctx.fillStyle = "rgba(38,20,40,0.55)";
   roundRectPath(ctx, x + inset, y + inset, cs - inset * 2, cs - inset * 2, cs * 0.2);
   ctx.fill();
-  ctx.font = `${cs * 0.55}px serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("💣", x + cs / 2, y + cs / 2);
+  const cx = x + cs / 2, cy = y + cs / 2 + cs * 0.06, r = cs * 0.24;
+  // fuse
+  ctx.strokeStyle = "#b98a3a"; ctx.lineWidth = cs * 0.05; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx + r * 0.5, cy - r * 0.7); ctx.quadraticCurveTo(cx + r * 1.1, cy - r * 1.3, cx + r * 0.7, cy - r * 1.6); ctx.stroke();
+  // spark
+  _star(ctx, cx + r * 0.7, cy - r * 1.7, 4, r * 0.4, r * 0.16, 0); ctx.fillStyle = "#ffcf3f"; ctx.fill();
+  // body
+  _circle(ctx, cx, cy, r); ctx.fillStyle = "#2b2740"; ctx.fill();
+  _circle(ctx, cx - r * 0.32, cy - r * 0.32, r * 0.22); ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.fill();
 }
 
 // ---------- Flow ----------
@@ -916,21 +1130,24 @@ function triggerLevelComplete() {
 
   // Collection / completionism: record this level's picture; a chest guarantees
   // a brand-new one even if this level's picture was already owned.
-  let newlyFound = !state.collection.includes(state.scene.emoji);
-  if (newlyFound) state.collection.push(state.scene.emoji);
+  let newlyFound = !state.collection.includes(state.scene.motif);
+  if (newlyFound) state.collection.push(state.scene.motif);
   if (isChest && !newlyFound) {
-    const locked = SCENES.map((s) => s.emoji).filter((e) => !state.collection.includes(e));
+    const locked = SCENES.map((s) => s.motif).filter((m) => !state.collection.includes(m));
     if (locked.length) { state.collection.push(locked[Math.floor(Math.random() * locked.length)]); newlyFound = true; }
   }
   if (newlyFound) localStorage.setItem("reveal.collection", JSON.stringify(state.collection));
 
   // chest vs normal presentation
   chestBadge.classList.toggle("hidden", !isChest);
-  lcTitle.textContent = isChest ? `Chapter ${chapterOf(state.level)} Cleared! 🎁` : "Board Cleared!";
+  lcTitle.textContent = isChest ? `Chapter ${chapterOf(state.level)} Cleared!` : "Board Cleared!";
 
   if (newlyFound) {
-    const shown = state.collection[state.collection.length - 1];
-    unlockNote.textContent = `✨ New picture unlocked! ${shown}  (${state.collection.length}/${SCENES.length})`;
+    const m = state.collection[state.collection.length - 1];
+    const sc = SCENES.find((s) => s.motif === m) || SCENES[0];
+    unlockNote.innerHTML = icon("sparkle", "18px") + " New picture! " +
+      `<img src="${motifThumb(m, sc.bg, 26)}" width="26" height="26" style="vertical-align:-8px;border-radius:7px;margin:0 5px">` +
+      ` (${state.collection.length}/${SCENES.length})`;
     unlockNote.classList.remove("hidden");
   } else {
     unlockNote.classList.add("hidden");
@@ -983,12 +1200,12 @@ function triggerGameOver(r, c) {
 
   setTimeout(() => {
     flashLayer.className = "";
-    nearMissEl.textContent = pctThere >= 50 ? `😤 So close — you were ${pctThere}% of the way there!` : "";
+    nearMissEl.textContent = pctThere >= 50 ? `So close — you were ${pctThere}% of the way there!` : "";
     finalScoreEl.textContent = state.score;
     continueBtn.disabled = state.usedContinueThisRun;
     continueBtn.innerHTML = state.usedContinueThisRun
       ? "No continues left"
-      : `<span class="reward-tag">AD</span> Refill ❤️ &amp; keep going`;
+      : `<span class="reward-tag">AD</span> Refill ${icon("heartFull", "16px")} &amp; keep going`;
     restartBtn.textContent = `Retry level ${state.level}`;
     show(gameOverScreen);
   }, 700);
@@ -1053,7 +1270,7 @@ function refreshHintButton() {
   // Autonomy (Self-Determination Theory): let players spend earned coins
   // instead of always being forced to watch an ad.
   if (state.coins >= HINT_COST) {
-    hintBtn.innerHTML = `Reveal a safe tile · ${HINT_COST} 🪙`;
+    hintBtn.innerHTML = `Reveal a safe tile · ${HINT_COST} ` + icon("coin", "16px");
   } else {
     hintBtn.innerHTML = `<span class="reward-tag">AD</span> Reveal a safe tile`;
   }
@@ -1090,7 +1307,7 @@ closeSettingsBtn.addEventListener("click", () => { Sound.tap(); hide(settingsScr
 function setSound(on) {
   Sound.enabled = on;
   localStorage.setItem("reveal.sound", on ? "on" : "off");
-  soundBtn.textContent = on ? "🔊" : "🔇";
+  soundBtn.innerHTML = icon(on ? "volumeOn" : "volumeOff", "22px");
 }
 function setHaptics(on) {
   state.haptics = on;
@@ -1131,9 +1348,13 @@ function renderMenu() {
   collectionRow.innerHTML = "";
   SCENES.forEach((s) => {
     const div = document.createElement("div");
-    const found = state.collection.includes(s.emoji);
+    const found = state.collection.includes(s.motif);
     div.className = "collection-cell " + (found ? "found" : "locked");
-    div.textContent = found ? s.emoji : "❓";
+    if (found) {
+      div.innerHTML = `<img src="${motifThumb(s.motif, s.bg, 40)}" alt="picture" width="100%" height="100%" style="border-radius:12px;display:block">`;
+    } else {
+      div.innerHTML = icon("lock", "20px");
+    }
     collectionRow.appendChild(div);
   });
   renderJourney();
@@ -1157,6 +1378,7 @@ resetBtn.addEventListener("click", () => {
 });
 
 // ---------- Boot ----------
+injectStaticIcons();
 setSound(Sound.enabled);
 computeStreak();
 loadMissions();

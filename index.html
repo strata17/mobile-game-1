@@ -17,9 +17,9 @@
 <div id="phone">
 
   <header id="topbar">
-    <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙</button>
-    <div id="coinPill">🪙 <span id="hudCoins">0</span></div>
-    <button id="soundBtn" class="icon-btn" aria-label="Toggle sound">🔊</button>
+    <button id="settingsBtn" class="icon-btn" aria-label="Settings" data-icon="gear" data-icon-size="22px"></button>
+    <div id="coinPill"><span data-icon="coin" data-icon-size="20px"></span> <span id="hudCoins">0</span></div>
+    <button id="soundBtn" class="icon-btn" aria-label="Toggle sound"></button>
   </header>
 
   <div id="stats">
@@ -47,7 +47,7 @@
   <div id="boardWrap">
     <canvas id="board"></canvas>
     <div id="tutorialHint" class="hidden">
-      <div class="tut-hand">👆</div>
+      <div class="tut-hand" data-icon="pointer" data-icon-size="46px"></div>
       <div class="tut-text">Drag to scratch &amp; reveal</div>
     </div>
     <div id="goalNudge" class="hidden"></div>
@@ -63,29 +63,29 @@
   <!-- Start / menu -->
   <div id="menuScreen" class="overlay">
     <div class="overlay-card pop">
-      <div class="logo-badge">🎯</div>
+      <div class="logo-badge" data-icon="target" data-icon-size="62px"></div>
       <h1>Reveal</h1>
-      <div id="streakBadge" class="streak-badge hidden">🔥 <span id="streakDays">0</span>-day streak</div>
+      <div id="streakBadge" class="streak-badge hidden"><span data-icon="flame" data-icon-size="15px"></span> <span id="streakDays">0</span>-day streak</div>
 
       <div id="journey" class="journey">
         <div class="journey-top">
           <span id="chapterLabel">Chapter 1</span>
-          <span id="chestHint">🎁 in 5</span>
+          <span id="chestHint"></span>
         </div>
         <div class="journey-track"><div id="journeyFill"></div></div>
       </div>
 
       <button id="startBtn" class="btn btn-primary">Play</button>
-      <button id="dailyBtn" class="btn btn-daily hidden">🎁 Claim daily reward</button>
+      <button id="dailyBtn" class="btn btn-daily hidden"></button>
       <button id="howtoBtn" class="btn btn-ghost">How to play</button>
 
       <div class="missions-block">
-        <div class="missions-head">🎯 Daily missions</div>
+        <div class="missions-head"><span data-icon="target" data-icon-size="14px"></span> Daily missions</div>
         <div id="missionsList"></div>
       </div>
 
       <div class="collection-block">
-        <div class="collection-head">🖼️ Picture gallery · <span id="collectionCount">0/0</span></div>
+        <div class="collection-head"><span data-icon="images" data-icon-size="14px"></span> Picture gallery · <span id="collectionCount">0/0</span></div>
         <div id="collectionRow" class="collection-row"></div>
       </div>
     </div>
@@ -94,7 +94,7 @@
   <!-- Level complete -->
   <div id="levelCompleteScreen" class="overlay hidden">
     <div class="overlay-card pop">
-      <div id="chestBadge" class="chest-badge hidden">🎁</div>
+      <div id="chestBadge" class="chest-badge hidden" data-icon="gift" data-icon-size="60px"></div>
       <div id="starRow" class="star-row">
         <span class="star" data-i="0">★</span>
         <span class="star" data-i="1">★</span>
@@ -103,7 +103,7 @@
       <h2 id="lcTitle">Board Cleared!</h2>
       <p class="sub">Level <span id="clearedLevel"></span> complete<br>
         <span class="pts">+<span id="levelPoints"></span> pts</span>
-        <span class="coins-earned">+<span id="levelCoins"></span> 🪙</span>
+        <span class="coins-earned">+<span id="levelCoins"></span> <span data-icon="coin" data-icon-size="16px"></span></span>
       </p>
       <div id="unlockNote" class="unlock-note hidden"></div>
       <button id="nextLevelBtn" class="btn btn-primary">Next Level →</button>
@@ -113,10 +113,10 @@
   <!-- Game over -->
   <div id="gameOverScreen" class="overlay hidden">
     <div class="overlay-card pop">
-      <div class="boom-badge">💥</div>
-      <h2>Out of hearts!</h2>
+      <div class="boom-badge" data-icon="burst" data-icon-size="58px"></div>
+      <h2>Out of lives!</h2>
       <p id="nearMiss" class="near-miss"></p>
-      <p class="sub">You ran out of ❤️.<br><span class="pts">Score: <span id="finalScore"></span></span></p>
+      <p class="sub">You ran out of lives.<br><span class="pts">Score: <span id="finalScore"></span></span></p>
       <button id="continueBtn" class="btn btn-reward"><span class="reward-tag">AD</span> Continue — clear the bombs</button>
       <button id="restartBtn" class="btn btn-ghost">Retry level</button>
     </div>
@@ -134,7 +134,7 @@
         <span>Haptics</span>
         <button id="hapticsToggle" class="toggle" data-on="true"><span class="knob"></span></button>
       </div>
-      <p class="sub small">Reveal v1.3 · 3 ❤️ per level, avoid ⚠️ bombs, clear 70%.</p>
+      <p class="sub small">Reveal v2.0 · 3 lives per level, avoid the bombs, clear 70%.</p>
       <button id="closeSettingsBtn" class="btn btn-primary">Done</button>
       <button id="resetBtn" class="btn btn-ghost danger-text">Reset all progress</button>
     </div>
