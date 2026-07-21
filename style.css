@@ -690,3 +690,8 @@ body {
 
 /* ---------- shared ---------- */
 @keyframes bump { 0%{transform:scale(1);} 45%{transform:scale(1.28);} 100%{transform:scale(1);} }
+
+/* inline SVG icons */
+.ic { flex-shrink: 0; }
+.btn .ic { vertical-align: -0.2em; }
+.collection-cell img { object-fit: cover; }
