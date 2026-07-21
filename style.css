@@ -480,3 +480,14 @@ body {
 
 /* Reset button */
 .danger-text { color: var(--danger); }
+
+/* ============ v1.3 hearts ============ */
+.hearts-row {
+  width: 100%;
+  text-align: center;
+  font-size: 22px;
+  letter-spacing: 4px;
+  line-height: 1;
+  margin-bottom: 14px;
+  min-height: 24px;
+}
