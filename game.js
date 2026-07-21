@@ -7,6 +7,12 @@
 const WIN_RATIO = 0.80;
 const REVEAL_MS = 240;          // per-tile cover dissolve duration
 const STAR_TIMES = [30, 60];    // <=30s -> 3 stars, <=60s -> 2 stars, else 1
+const HINT_COST = 50;           // coins to spend on a hint instead of watching an ad
+const BONUS_COIN = 25;          // coins from a surprise bonus tile
+const LEVEL_COIN = 15;          // coins for clearing a level
+const ENDOW_TILES = 4;          // head-start tiles pre-revealed (endowed progress effect)
+const NUDGE_REMAINING = 5;      // show "almost there" when this many safe tiles remain
+const GLOW_AT = 0.7;            // progress fraction where the goal-gradient glow kicks in
 
 const SCENES = [
   { emoji: "🐱", bg: ["#ff9a9e", "#fecfef"], deco: "#ffffff" },
@@ -60,6 +66,18 @@ const finalScoreEl = document.getElementById("finalScore");
 const adTimerEl = document.getElementById("adTimer");
 const starEls = [...document.querySelectorAll("#starRow .star")];
 
+const hudCoins = document.getElementById("hudCoins");
+const coinPill = document.getElementById("coinPill");
+const goalNudge = document.getElementById("goalNudge");
+const streakBadge = document.getElementById("streakBadge");
+const streakDays = document.getElementById("streakDays");
+const collectionRow = document.getElementById("collectionRow");
+const collectionCount = document.getElementById("collectionCount");
+const levelCoinsEl = document.getElementById("levelCoins");
+const unlockNote = document.getElementById("unlockNote");
+const nearMissEl = document.getElementById("nearMiss");
+const resetBtn = document.getElementById("resetBtn");
+
 // ---------- Audio ----------
 const Sound = {
   ctx: null,
@@ -102,6 +120,8 @@ const Sound = {
   tap() { this.tone(280, 0.05, "square", 0.04); },
   bomb() { this.noise(0.35, 0.3); this.tone(160, 0.5, "sawtooth", 0.12); this.tone(70, 0.6, "sine", 0.14); },
   win() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.22, "triangle", 0.07, i * 0.09)); },
+  bonus() { [880, 1175, 1568].forEach((f, i) => this.tone(f, 0.1, "triangle", 0.06, i * 0.05)); },
+  coin() { this.tone(1319, 0.09, "triangle", 0.05); },
 };
 
 function haptic(ms) {
@@ -112,14 +132,15 @@ function haptic(ms) {
 const state = {
   level: 1,
   score: 0,
-  displayScore: 0,
   best: Number(localStorage.getItem("reveal.best") || 0),
+  coins: Number(localStorage.getItem("reveal.coins") || 0),
   gridSize: 8,
   cellSize: 0,
   boardPx: 360,
   revealed: [],
   revealAt: [],
   bomb: [],
+  bonus: [],
   revealedCount: 0,
   nonBombTotal: 0,
   usedContinueThisRun: false,
@@ -129,9 +150,25 @@ const state = {
   scene: SCENES[0],
   haptics: localStorage.getItem("reveal.haptics") !== "off",
   hasScratchedEver: localStorage.getItem("reveal.tutorialDone") === "1",
+  collection: safeParse(localStorage.getItem("reveal.collection"), []),
+  streak: 0,
+  _lastScore: 0,
 };
 
+function safeParse(s, fallback) { try { return s ? JSON.parse(s) : fallback; } catch (e) { return fallback; } }
+
 hudBest.textContent = state.best;
+hudCoins.textContent = state.coins;
+
+function addCoins(n) {
+  state.coins += n;
+  localStorage.setItem("reveal.coins", String(state.coins));
+  hudCoins.textContent = state.coins;
+  coinPill.classList.remove("bump");
+  void coinPill.offsetWidth;
+  coinPill.classList.add("bump");
+  if (typeof refreshHintButton === "function") refreshHintButton();
+}
 
 // ---------- Canvas / DPI ----------
 let dpr = 1;
@@ -195,6 +232,7 @@ function buildLevel(level) {
   const revealed = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
   const revealAt = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
   const bomb = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
+  const bonus = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
 
   const target = bombCountForLevel(level, gridSize * gridSize);
   let bombCount = 0;
@@ -209,13 +247,50 @@ function buildLevel(level) {
   state.revealed = revealed;
   state.revealAt = revealAt;
   state.bomb = bomb;
+  state.bonus = bonus;
   state.revealedCount = 0;
   state.nonBombTotal = gridSize * gridSize - bombCount;
   state.scene = SCENES[Math.floor(Math.random() * SCENES.length)];
   state.levelStart = performance.now();
 
+  // Variable-ratio reward (Skinner): 1-3 hidden bonus tiles that pay coins when
+  // scratched — unpredictable payoffs on otherwise-ordinary tiles.
+  const safeCells = [];
+  for (let r = 0; r < gridSize; r++)
+    for (let c = 0; c < gridSize; c++)
+      if (!bomb[r][c]) safeCells.push([r, c]);
+  shuffle(safeCells);
+  const bonusCount = 1 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < bonusCount && i < safeCells.length; i++) {
+    const [r, c] = safeCells[i];
+    bonus[r][c] = true;
+  }
+
+  // Endowed progress effect (Nunes & Drèze 2006): pre-reveal a few safe,
+  // non-bonus corner-ish tiles so the player starts already partway to the goal.
+  const endowPool = safeCells.filter(([r, c]) => !bonus[r][c]);
+  endowPool.sort((a, b) => cornerDist(a, gridSize) - cornerDist(b, gridSize));
+  for (let i = 0; i < ENDOW_TILES && i < endowPool.length; i++) {
+    const [r, c] = endowPool[i];
+    revealed[r][c] = true;
+    revealAt[r][c] = performance.now() - REVEAL_MS; // already fully dissolved
+    state.revealedCount++;
+  }
+
   composeHidden();
   updateHud();
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// distance to the nearest corner, so endowed tiles cluster at the edges
+function cornerDist([r, c], n) {
+  return Math.min(r, n - 1 - r) + Math.min(c, n - 1 - c);
 }
 
 function composeHidden() {
@@ -275,6 +350,12 @@ function burst(x, y, color, count, spread) {
   }
 }
 
+// floating text popups ("+25 🪙", etc.) drawn in the render loop
+let popups = [];
+function popText(x, y, text, color) {
+  popups.push({ x, y, text, color, life: 1 });
+}
+
 function confetti() {
   const colors = ["#ff5470", "#ffcb47", "#38e07b", "#4facfe", "#a18cd1", "#ffffff"];
   for (let i = 0; i < 90; i++) {
@@ -297,9 +378,24 @@ function updateHud() {
   hudScore.textContent = state.score;
   hudBest.textContent = state.best;
   const threshold = Math.ceil(state.nonBombTotal * WIN_RATIO);
-  const pct = threshold === 0 ? 0 : Math.min(100, Math.round((state.revealedCount / threshold) * 100));
+  const frac = threshold === 0 ? 0 : state.revealedCount / threshold;
+  const pct = Math.min(100, Math.round(frac * 100));
   progressFill.style.width = pct + "%";
   progressPct.textContent = pct + "%";
+
+  // Goal-gradient effect: light up the bar as the finish line nears
+  const near = frac >= GLOW_AT && frac < 1;
+  progressFill.classList.toggle("near-goal", near);
+  progressPct.classList.toggle("near-goal", near);
+
+  // Zeigarnik / goal-gradient nudge: surface exactly how few tiles remain
+  const remaining = Math.max(0, threshold - state.revealedCount);
+  if (state.playing && remaining > 0 && remaining <= NUDGE_REMAINING) {
+    goalNudge.textContent = `🔥 Almost! ${remaining} to go`;
+    goalNudge.classList.remove("hidden");
+  } else {
+    goalNudge.classList.add("hidden");
+  }
 }
 
 function bumpScore() {
@@ -315,6 +411,7 @@ function cellCenter(r, c) {
 
 // returns true if this reveal ended the stroke (bomb or win)
 function revealCell(r, c, combo) {
+  if (!state.playing) return false; // ignore reveals once the level has ended (prevents double-completion)
   if (r < 0 || c < 0 || r >= state.gridSize || c >= state.gridSize) return false;
   if (state.revealed[r][c]) return false;
   state.revealed[r][c] = true;
@@ -332,6 +429,15 @@ function revealCell(r, c, combo) {
   state.score += gain;
   burst(x, y, state.scene.bg[0], 6, state.cellSize * 0.06);
   Sound.reveal(combo);
+
+  // Variable-ratio surprise payout
+  if (state.bonus[r][c]) {
+    addCoins(BONUS_COIN);
+    popText(x, y - state.cellSize * 0.2, "+" + BONUS_COIN + " 🪙", "#ffcb47");
+    burst(x, y, "#ffcb47", 16, state.cellSize * 0.12);
+    Sound.bonus();
+    haptic(20);
+  }
 
   if (state.revealedCount >= Math.ceil(state.nonBombTotal * WIN_RATIO)) {
     triggerLevelComplete();
@@ -494,13 +600,31 @@ function frame(now) {
   }
   ctx.globalAlpha = 1;
 
+  // floating reward text
+  for (let i = popups.length - 1; i >= 0; i--) {
+    const p = popups[i];
+    p.life -= 0.012 * dt;
+    p.y -= 0.6 * dt;
+    if (p.life <= 0) { popups.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.min(1, p.life * 1.5);
+    ctx.font = "800 20px -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.strokeText(p.text, p.x, p.y);
+    ctx.fillStyle = p.color;
+    ctx.fillText(p.text, p.x, p.y);
+  }
+  ctx.globalAlpha = 1;
+
   // combo badge near cursor
   if (dragging && comboCount >= 4) {
     // drawn subtly at top center to avoid finger occlusion
     ctx.font = "800 22px -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,203,71,0.95)";
-    ctx.fillText("COMBO x" + comboCount, state.boardPx / 2, 30);
+    ctx.fillText("COMBO x" + Math.min(comboCount, 99), state.boardPx / 2, 30);
   }
 }
 requestAnimationFrame(frame);
@@ -528,7 +652,9 @@ function startRun() {
   hide(menuScreen); hide(gameOverScreen); hide(levelCompleteScreen);
   state.playing = true;
   particles = [];
+  popups = [];
   buildLevel(state.level);
+  refreshHintButton();
   maybeShowTutorial();
 }
 
@@ -539,9 +665,15 @@ function maybeShowTutorial() {
 
 function triggerLevelComplete() {
   state.playing = false;
+  goalNudge.classList.add("hidden");
   const bonus = 50 * state.level;
   state.score += bonus;
   if (state.score > state.best) { state.best = state.score; localStorage.setItem("reveal.best", String(state.best)); }
+
+  // reward coins (peak-end rule: end the level on a high, tangible payoff)
+  const coinReward = LEVEL_COIN + 3 * state.level;
+  addCoins(coinReward);
+
   confetti();
   flashLayer.className = "flash-win";
   Sound.win();
@@ -550,8 +682,22 @@ function triggerLevelComplete() {
   const secs = (performance.now() - state.levelStart) / 1000;
   const stars = secs <= STAR_TIMES[0] ? 3 : secs <= STAR_TIMES[1] ? 2 : 1;
 
+  // Collection / completionism: record the picture uncovered this level
+  const newlyFound = !state.collection.includes(state.scene.emoji);
+  if (newlyFound) {
+    state.collection.push(state.scene.emoji);
+    localStorage.setItem("reveal.collection", JSON.stringify(state.collection));
+  }
+  if (newlyFound) {
+    unlockNote.textContent = `✨ New picture unlocked! ${state.scene.emoji}  (${state.collection.length}/${SCENES.length})`;
+    unlockNote.classList.remove("hidden");
+  } else {
+    unlockNote.classList.add("hidden");
+  }
+
   clearedLevelEl.textContent = state.level;
   levelPointsEl.textContent = bonus;
+  levelCoinsEl.textContent = coinReward;
   hudScore.textContent = state.score;
   updateHud();
 
@@ -569,11 +715,14 @@ function goToNextLevel() {
   state.level++;
   state.playing = true;
   particles = [];
+  popups = [];
   buildLevel(state.level);
+  refreshHintButton();
 }
 
 function triggerGameOver(r, c) {
   state.playing = false;
+  goalNudge.classList.add("hidden");
   const { x, y } = cellCenter(r, c);
   burst(x, y, "#ff5470", 40, state.cellSize * 0.18);
   burst(x, y, "#ffcb47", 20, state.cellSize * 0.14);
@@ -583,10 +732,16 @@ function triggerGameOver(r, c) {
   haptic([60, 30, 120]);
 
   if (state.score > state.best) { state.best = state.score; localStorage.setItem("reveal.best", String(state.best)); }
+
+  // Near-miss framing (Reid 1986): tell the player how close they were, to
+  // motivate a continue/retry. Only emphasize when it was genuinely close.
+  const threshold = Math.ceil(state.nonBombTotal * WIN_RATIO);
+  const pctThere = threshold === 0 ? 0 : Math.min(99, Math.round((state.revealedCount / threshold) * 100));
   updateHud();
 
   setTimeout(() => {
     flashLayer.className = "";
+    nearMissEl.textContent = pctThere >= 50 ? `😤 So close — you were ${pctThere}% of the way there!` : "";
     finalScoreEl.textContent = state.score;
     continueBtn.disabled = state.usedContinueThisRun;
     continueBtn.innerHTML = state.usedContinueThisRun
@@ -642,23 +797,42 @@ continueBtn.addEventListener("click", () => {
 restartBtn.addEventListener("click", () => {
   Sound.tap();
   hide(gameOverScreen);
-  maybeInterstitial(() => show(menuScreen));
+  maybeInterstitial(() => { renderMenu(); show(menuScreen); });
 });
+
+function refreshHintButton() {
+  // Autonomy (Self-Determination Theory): let players spend earned coins
+  // instead of always being forced to watch an ad.
+  if (state.coins >= HINT_COST) {
+    hintBtn.innerHTML = `Reveal a safe tile · ${HINT_COST} 🪙`;
+  } else {
+    hintBtn.innerHTML = `<span class="reward-tag">AD</span> Reveal a safe tile`;
+  }
+}
+
+function doHintReveal() {
+  const safe = [];
+  for (let r = 0; r < state.gridSize; r++)
+    for (let c = 0; c < state.gridSize; c++)
+      if (!state.revealed[r][c] && !state.bomb[r][c]) safe.push([r, c]);
+  if (!safe.length) return;
+  const [r, c] = safe[Math.floor(Math.random() * safe.length)];
+  revealCell(r, c, 1);
+  updateHud();
+  bumpScore();
+}
 
 hintBtn.addEventListener("click", () => {
   if (!state.playing) return;
   Sound.init();
-  playMockAd(1500, () => {
-    const safe = [];
-    for (let r = 0; r < state.gridSize; r++)
-      for (let c = 0; c < state.gridSize; c++)
-        if (!state.revealed[r][c] && !state.bomb[r][c]) safe.push([r, c]);
-    if (!safe.length) return;
-    const [r, c] = safe[Math.floor(Math.random() * safe.length)];
-    revealCell(r, c, 1);
-    updateHud();
-    bumpScore();
-  });
+  if (state.coins >= HINT_COST) {
+    addCoins(-HINT_COST);
+    Sound.coin();
+    doHintReveal();
+    refreshHintButton();
+  } else {
+    playMockAd(1500, () => { doHintReveal(); refreshHintButton(); });
+  }
 });
 
 settingsBtn.addEventListener("click", () => { Sound.tap(); syncToggles(); show(settingsScreen); });
@@ -681,8 +855,56 @@ soundToggle.addEventListener("click", () => { setSound(!Sound.enabled); syncTogg
 hapticsToggle.addEventListener("click", () => { setHaptics(!state.haptics); syncToggles(); haptic(30); });
 soundBtn.addEventListener("click", () => { setSound(!Sound.enabled); if (Sound.enabled) { Sound.init(); Sound.tap(); } });
 
+// ---------- Streak / collection / reset ----------
+function computeStreak() {
+  const today = new Date().toDateString();
+  const last = localStorage.getItem("reveal.lastPlayed");
+  let streak = Number(localStorage.getItem("reveal.streak") || 0);
+  if (last !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    streak = last === yesterday ? streak + 1 : 1;
+    localStorage.setItem("reveal.streak", String(streak));
+    localStorage.setItem("reveal.lastPlayed", today);
+  }
+  state.streak = streak;
+}
+
+function renderMenu() {
+  if (state.streak >= 1) {
+    streakDays.textContent = state.streak;
+    streakBadge.classList.remove("hidden");
+  } else {
+    streakBadge.classList.add("hidden");
+  }
+  collectionCount.textContent = `${state.collection.length}/${SCENES.length}`;
+  collectionRow.innerHTML = "";
+  SCENES.forEach((s) => {
+    const div = document.createElement("div");
+    const found = state.collection.includes(s.emoji);
+    div.className = "collection-cell " + (found ? "found" : "locked");
+    div.textContent = found ? s.emoji : "❓";
+    collectionRow.appendChild(div);
+  });
+}
+
+resetBtn.addEventListener("click", () => {
+  if (!window.confirm("Reset all progress — coins, best score, streak and gallery?")) return;
+  ["reveal.best", "reveal.coins", "reveal.collection", "reveal.streak", "reveal.lastPlayed", "reveal.gameOverCount"]
+    .forEach((k) => localStorage.removeItem(k));
+  state.best = 0; state.coins = 0; state.collection = []; state.gameOverCount = 0;
+  hudBest.textContent = "0"; hudCoins.textContent = "0";
+  computeStreak();
+  renderMenu();
+  refreshHintButton();
+  hide(settingsScreen);
+  show(menuScreen);
+});
+
 // ---------- Boot ----------
 setSound(Sound.enabled);
+computeStreak();
+renderMenu();
+refreshHintButton();
 window.addEventListener("resize", () => {
   const wasPlaying = state.playing;
   sizeBoard();
