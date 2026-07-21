@@ -298,30 +298,65 @@ let hiddenCanvas = document.createElement("canvas");
 let hiddenCtx = hiddenCanvas.getContext("2d");
 let coverTile = null;
 
+function roundRectPath(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+// Glossy, rounded, beveled "foil" tile — tactile like a real game gem/scratch tile.
 function makeCoverTile() {
-  const s = 96;
+  const s = 128;
   const c = document.createElement("canvas");
   c.width = c.height = s;
   const g = c.getContext("2d");
-  const grad = g.createLinearGradient(0, 0, s, s);
-  grad.addColorStop(0, "#c9ccd6");
-  grad.addColorStop(0.45, "#9fa3b2");
-  grad.addColorStop(0.55, "#babecb");
-  grad.addColorStop(1, "#8a8e9d");
+  const r = s * 0.2;
+
+  roundRectPath(g, 3, 3, s - 6, s - 6, r);
+  g.save();
+  g.clip();
+
+  // cool metallic base with a crisp mid band
+  const grad = g.createLinearGradient(0, 0, 0, s);
+  grad.addColorStop(0, "#f2f5ff");
+  grad.addColorStop(0.5, "#c3cbe8");
+  grad.addColorStop(0.5, "#aeb7da");
+  grad.addColorStop(1, "#8b95bd");
   g.fillStyle = grad;
   g.fillRect(0, 0, s, s);
-  // diagonal sheen
-  g.globalAlpha = 0.25;
+
+  // top gloss
+  const gloss = g.createLinearGradient(0, 0, 0, s * 0.52);
+  gloss.addColorStop(0, "rgba(255,255,255,0.9)");
+  gloss.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gloss;
+  g.fillRect(0, 0, s, s * 0.52);
+
+  // diagonal sheen streak
+  g.globalAlpha = 0.35;
   g.strokeStyle = "#ffffff";
-  g.lineWidth = 6;
-  g.beginPath(); g.moveTo(-10, 30); g.lineTo(40, -10); g.stroke();
-  g.globalAlpha = 0.12;
-  g.beginPath(); g.moveTo(50, s + 10); g.lineTo(s + 10, 50); g.stroke();
-  // subtle speckle
-  g.globalAlpha = 0.08;
-  g.fillStyle = "#ffffff";
-  for (let i = 0; i < 18; i++) g.fillRect(Math.random() * s, Math.random() * s, 2, 2);
+  g.lineWidth = 12;
+  g.beginPath(); g.moveTo(-12, s * 0.42); g.lineTo(s * 0.46, -12); g.stroke();
+  g.globalAlpha = 0.16;
+  g.lineWidth = 7;
+  g.beginPath(); g.moveTo(s * 0.5, s + 12); g.lineTo(s + 12, s * 0.5); g.stroke();
   g.globalAlpha = 1;
+  g.restore();
+
+  // rim: bright top edge, soft dark bottom
+  roundRectPath(g, 3, 3, s - 6, s - 6, r);
+  g.lineWidth = 3.5;
+  g.strokeStyle = "rgba(255,255,255,0.55)";
+  g.stroke();
+  roundRectPath(g, 4.5, 5, s - 9, s - 8, r);
+  g.lineWidth = 2;
+  g.strokeStyle = "rgba(70,60,110,0.25)";
+  g.stroke();
+
   coverTile = c;
 }
 makeCoverTile();
@@ -433,34 +468,66 @@ function composeHidden() {
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, P, P);
 
+  // diagonal background gradient
   const grad = g.createLinearGradient(0, 0, P, P);
   grad.addColorStop(0, state.scene.bg[0]);
   grad.addColorStop(1, state.scene.bg[1]);
   g.fillStyle = grad;
   g.fillRect(0, 0, P, P);
 
+  // top-left glow for depth
+  const glow = g.createRadialGradient(P * 0.3, P * 0.24, 0, P * 0.3, P * 0.24, P * 0.85);
+  glow.addColorStop(0, "rgba(255,255,255,0.34)");
+  glow.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = glow;
+  g.fillRect(0, 0, P, P);
+
+  // decorative concentric rings
+  g.save();
+  g.globalAlpha = 0.13;
+  g.strokeStyle = state.scene.deco;
+  g.lineWidth = P * 0.018;
+  for (let i = 1; i <= 3; i++) {
+    g.beginPath();
+    g.arc(P / 2, P / 2, P * 0.15 * i, 0, Math.PI * 2);
+    g.stroke();
+  }
+  g.restore();
+
   // soft bokeh
   g.save();
-  for (let i = 0; i < 7; i++) {
-    g.globalAlpha = 0.12 + Math.random() * 0.12;
+  for (let i = 0; i < 10; i++) {
+    g.globalAlpha = 0.1 + Math.random() * 0.13;
     g.fillStyle = state.scene.deco;
-    const r = P * (0.05 + Math.random() * 0.12);
+    const r = P * (0.02 + Math.random() * 0.06);
     g.beginPath();
     g.arc(Math.random() * P, Math.random() * P, r, 0, Math.PI * 2);
     g.fill();
   }
   g.restore();
 
-  // subject
+  // spotlight behind the subject
+  const spot = g.createRadialGradient(P / 2, P * 0.5, 0, P / 2, P * 0.5, P * 0.34);
+  spot.addColorStop(0, "rgba(255,255,255,0.5)");
+  spot.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = spot;
+  g.fillRect(0, 0, P, P);
+
+  // subject with a soft drop shadow
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.font = `${Math.floor(P * 0.5)}px serif`;
+  g.font = `${Math.floor(P * 0.46)}px serif`;
+  g.save();
+  g.shadowColor = "rgba(0,0,0,0.32)";
+  g.shadowBlur = P * 0.03;
+  g.shadowOffsetY = P * 0.015;
   g.fillText(state.scene.emoji, P / 2, P / 2 + P * 0.02);
+  g.restore();
 
   // vignette
-  const vg = g.createRadialGradient(P / 2, P / 2, P * 0.3, P / 2, P / 2, P * 0.72);
+  const vg = g.createRadialGradient(P / 2, P / 2, P * 0.32, P / 2, P / 2, P * 0.76);
   vg.addColorStop(0, "rgba(0,0,0,0)");
-  vg.addColorStop(1, "rgba(0,0,0,0.28)");
+  vg.addColorStop(1, "rgba(24,12,48,0.36)");
   g.fillStyle = vg;
   g.fillRect(0, 0, P, P);
 }
@@ -679,7 +746,8 @@ function frame(now) {
   ctx.drawImage(hiddenCanvas, 0, 0, state.boardPx, state.boardPx);
 
   const cs = state.cellSize;
-  const inset = Math.max(0.5, cs * 0.03);
+  const inset = Math.max(1, cs * 0.06);
+  const tileR = cs * 0.2;
 
   for (let r = 0; r < state.gridSize; r++) {
     for (let c = 0; c < state.gridSize; c++) {
@@ -707,11 +775,12 @@ function frame(now) {
       // visible bomb warning so the player can scratch around it
       if (!revealed && state.bomb[r][c]) {
         const pulse = 0.7 + 0.3 * Math.sin(now / 260);
-        ctx.globalAlpha = 0.5 * pulse;
-        ctx.fillStyle = "#ff2b3d";
-        ctx.fillRect(ox, oy, sz, sz);
+        ctx.globalAlpha = 0.55 * pulse;
+        ctx.fillStyle = "#ff2b45";
+        roundRectPath(ctx, ox, oy, sz, sz, tileR);
+        ctx.fill();
         ctx.globalAlpha = 1;
-        ctx.font = `${cs * 0.55}px serif`;
+        ctx.font = `${cs * 0.5}px serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("⚠️", x + cs / 2, y + cs / 2 + cs * 0.02);
@@ -721,7 +790,8 @@ function frame(now) {
         // white pop flash as it dissolves
         ctx.globalAlpha = coverAlpha * 0.6;
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(ox, oy, sz, sz);
+        roundRectPath(ctx, ox, oy, sz, sz, tileR * scale);
+        ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
@@ -782,9 +852,11 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 function drawBomb(x, y, cs) {
-  ctx.fillStyle = "rgba(255,84,112,0.9)";
-  ctx.fillRect(x, y, cs, cs);
-  ctx.font = `${cs * 0.6}px serif`;
+  const inset = Math.max(1, cs * 0.06);
+  ctx.fillStyle = "rgba(255,64,92,0.92)";
+  roundRectPath(ctx, x + inset, y + inset, cs - inset * 2, cs - inset * 2, cs * 0.2);
+  ctx.fill();
+  ctx.font = `${cs * 0.55}px serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("💣", x + cs / 2, y + cs / 2);
