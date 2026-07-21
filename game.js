@@ -130,7 +130,7 @@ function haptic(ms) {
 
 // ---------- State ----------
 const state = {
-  level: 1,
+  level: Number(localStorage.getItem("reveal.level") || 1),
   score: 0,
   best: Number(localStorage.getItem("reveal.best") || 0),
   coins: Number(localStorage.getItem("reveal.coins") || 0),
@@ -222,10 +222,14 @@ function sizeBoard() {
 }
 
 // ---------- Level generation ----------
-function gridSizeForLevel(level) { return Math.min(8 + Math.floor((level - 1) / 3), 12); }
-// Bombs are visible and avoidable, so difficulty comes from how many there are
-// to thread around. Start gentle (level 1 = 3) and ramp steadily.
-function bombCountForLevel(level, cells) { return Math.min(2 + level, Math.floor(cells * 0.2)); }
+// Grow the board slowly so early levels stay familiar (8x8 for the first 5).
+function gridSizeForLevel(level) { return Math.min(8 + Math.floor((level - 1) / 5), 12); }
+// Very gentle ramp: 1 bomb for levels 1-5, then +1 every 5 levels. Bombs are
+// visible and avoidable, so this is the whole difficulty dial — keep it slow.
+function bombCountForLevel(level, cells) {
+  const bombs = 1 + Math.floor((level - 1) / 5);
+  return Math.min(bombs, Math.floor(cells * 0.18));
+}
 
 function buildLevel(level) {
   const gridSize = gridSizeForLevel(level);
@@ -252,6 +256,11 @@ function buildLevel(level) {
   state.nonBombTotal = gridSize * gridSize - bombCount;
   state.scene = SCENES[Math.floor(Math.random() * SCENES.length)];
   state.levelStart = performance.now();
+  // score is per-level attempt; each level (and each retry) starts fresh.
+  state.score = 0;
+  state._lastScore = 0;
+  // one ad-continue is available per level attempt.
+  state.usedContinueThisRun = false;
 
   // Variable-ratio reward (Skinner): 1-3 hidden bonus tiles that pay coins when
   // scratched — unpredictable payoffs on otherwise-ordinary tiles.
@@ -645,10 +654,8 @@ function hide(el) { el.classList.add("hidden"); }
 function startRun() {
   Sound.init();
   Sound.tap();
-  state.level = 1;
-  state.score = 0;
-  state._lastScore = 0;
-  state.usedContinueThisRun = false;
+  // resume the player's saved progress (levels persist; deaths don't reset them)
+  state.level = Number(localStorage.getItem("reveal.level") || 1);
   hide(menuScreen); hide(gameOverScreen); hide(levelCompleteScreen);
   state.playing = true;
   particles = [];
@@ -713,6 +720,7 @@ function goToNextLevel() {
   Sound.tap();
   hide(levelCompleteScreen);
   state.level++;
+  localStorage.setItem("reveal.level", String(state.level)); // progress persists
   state.playing = true;
   particles = [];
   popups = [];
@@ -747,6 +755,7 @@ function triggerGameOver(r, c) {
     continueBtn.innerHTML = state.usedContinueThisRun
       ? "No continues left"
       : '<span class="reward-tag">AD</span> Continue — clear the bombs';
+    restartBtn.textContent = `Retry level ${state.level}`;
     show(gameOverScreen);
   }, 700);
 }
@@ -797,7 +806,14 @@ continueBtn.addEventListener("click", () => {
 restartBtn.addEventListener("click", () => {
   Sound.tap();
   hide(gameOverScreen);
-  maybeInterstitial(() => { renderMenu(); show(menuScreen); });
+  // retry the SAME level with a fresh board — progress is never lost
+  maybeInterstitial(() => {
+    state.playing = true;
+    particles = [];
+    popups = [];
+    buildLevel(state.level);
+    refreshHintButton();
+  });
 });
 
 function refreshHintButton() {
@@ -870,6 +886,8 @@ function computeStreak() {
 }
 
 function renderMenu() {
+  const savedLevel = Number(localStorage.getItem("reveal.level") || 1);
+  startBtn.textContent = savedLevel > 1 ? `Continue · Level ${savedLevel}` : "Play";
   if (state.streak >= 1) {
     streakDays.textContent = state.streak;
     streakBadge.classList.remove("hidden");
@@ -889,9 +907,9 @@ function renderMenu() {
 
 resetBtn.addEventListener("click", () => {
   if (!window.confirm("Reset all progress — coins, best score, streak and gallery?")) return;
-  ["reveal.best", "reveal.coins", "reveal.collection", "reveal.streak", "reveal.lastPlayed", "reveal.gameOverCount"]
+  ["reveal.best", "reveal.coins", "reveal.collection", "reveal.streak", "reveal.lastPlayed", "reveal.gameOverCount", "reveal.level"]
     .forEach((k) => localStorage.removeItem(k));
-  state.best = 0; state.coins = 0; state.collection = []; state.gameOverCount = 0;
+  state.best = 0; state.coins = 0; state.collection = []; state.gameOverCount = 0; state.level = 1;
   hudBest.textContent = "0"; hudCoins.textContent = "0";
   computeStreak();
   renderMenu();
@@ -912,5 +930,5 @@ window.addEventListener("resize", () => {
   state.playing = wasPlaying;
 });
 sizeBoard();
-buildLevel(1);
+buildLevel(state.level);
 state.playing = false;
