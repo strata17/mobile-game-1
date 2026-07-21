@@ -921,12 +921,60 @@ canvas.addEventListener("pointermove", (e) => { if (dragging) scratchAt(e.client
 window.addEventListener("pointerup", () => { dragging = false; comboCount = 0; lastX = lastY = null; });
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
+// ---------- Ambient backdrop (drifting motifs + twinkles) ----------
+const ambient = document.getElementById("ambient");
+const actx = ambient.getContext("2d");
+let ambItems = [], twinkles = [], aW = 0, aH = 0;
+
+function sizeAmbient() {
+  aW = window.innerWidth; aH = window.innerHeight;
+  ambient.width = Math.floor(aW * dpr);
+  ambient.height = Math.floor(aH * dpr);
+  actx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function initAmbient() {
+  ambItems = [];
+  for (let i = 0; i < 7; i++) {
+    const sc = SCENES[Math.floor(Math.random() * SCENES.length)];
+    ambItems.push({
+      motif: sc.motif, x: Math.random(), y: Math.random(),
+      size: 26 + Math.random() * 40, rot: Math.random() * Math.PI * 2,
+      vrot: (Math.random() - 0.5) * 0.004, vy: 0.02 + Math.random() * 0.03,
+    });
+  }
+  twinkles = [];
+  for (let i = 0; i < 40; i++) twinkles.push({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2, ph: Math.random() * 10 });
+}
+function drawAmbient(now, dt) {
+  if (!aW) return;
+  actx.clearRect(0, 0, aW, aH);
+  actx.fillStyle = "#ffffff";
+  for (const t of twinkles) {
+    actx.globalAlpha = 0.12 + 0.14 * (0.5 + 0.5 * Math.sin(now / 650 + t.ph));
+    actx.beginPath(); actx.arc(t.x * aW, t.y * aH, t.r, 0, Math.PI * 2); actx.fill();
+  }
+  for (const it of ambItems) {
+    it.y -= (it.vy / aH) * dt * 16;
+    if (it.y < -0.12) { it.y = 1.12; it.x = Math.random(); }
+    it.rot += it.vrot * dt;
+    actx.save();
+    actx.globalAlpha = 0.09;
+    actx.translate(it.x * aW, it.y * aH);
+    actx.rotate(it.rot);
+    actx.lineJoin = "round";
+    (MOTIFS[it.motif] || MOTIFS.star)(actx, 0, 0, it.size);
+    actx.restore();
+  }
+  actx.globalAlpha = 1;
+}
+
 // ---------- Render loop ----------
 let lastFrame = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - lastFrame) / 16.67, 3);
   lastFrame = now;
+  drawAmbient(now, dt);
 
   // shake offset
   let sx = 0, sy = 0;
@@ -1387,9 +1435,12 @@ refreshHintButton();
 window.addEventListener("resize", () => {
   const wasPlaying = state.playing;
   sizeBoard();
+  sizeAmbient();
   updateHud();
   state.playing = wasPlaying;
 });
 sizeBoard();
+sizeAmbient();
+initAmbient();
 buildLevel(state.level);
 state.playing = false;
