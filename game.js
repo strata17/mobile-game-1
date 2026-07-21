@@ -4,7 +4,8 @@
 // (every 3rd game over), rewarded continue, rewarded hint.
 
 // ---------- Config ----------
-const WIN_RATIO = 0.80;
+const WIN_RATIO = 0.70;         // fraction of safe tiles to clear a level
+const MAX_HEARTS = 3;           // mistakes allowed per level before it fails
 const REVEAL_MS = 240;          // per-tile cover dissolve duration
 const STAR_TIMES = [30, 60];    // <=30s -> 3 stars, <=60s -> 2 stars, else 1
 const HINT_COST = 50;           // coins to spend on a hint instead of watching an ad
@@ -68,6 +69,7 @@ const starEls = [...document.querySelectorAll("#starRow .star")];
 
 const hudCoins = document.getElementById("hudCoins");
 const coinPill = document.getElementById("coinPill");
+const heartsRow = document.getElementById("heartsRow");
 const goalNudge = document.getElementById("goalNudge");
 const streakBadge = document.getElementById("streakBadge");
 const streakDays = document.getElementById("streakDays");
@@ -141,6 +143,7 @@ const state = {
   revealAt: [],
   bomb: [],
   bonus: [],
+  hearts: MAX_HEARTS,
   revealedCount: 0,
   nonBombTotal: 0,
   usedContinueThisRun: false,
@@ -159,6 +162,12 @@ function safeParse(s, fallback) { try { return s ? JSON.parse(s) : fallback; } c
 
 hudBest.textContent = state.best;
 hudCoins.textContent = state.coins;
+
+function renderHearts() {
+  let s = "";
+  for (let i = 0; i < MAX_HEARTS; i++) s += i < state.hearts ? "❤️" : "🖤";
+  heartsRow.textContent = s;
+}
 
 function addCoins(n) {
   state.coins += n;
@@ -261,6 +270,9 @@ function buildLevel(level) {
   state._lastScore = 0;
   // one ad-continue is available per level attempt.
   state.usedContinueThisRun = false;
+  // fresh hearts for the new board
+  state.hearts = MAX_HEARTS;
+  renderHearts();
 
   // Variable-ratio reward (Skinner): 1-3 hidden bonus tiles that pay coins when
   // scratched — unpredictable payoffs on otherwise-ordinary tiles.
@@ -429,7 +441,23 @@ function revealCell(r, c, combo) {
   const { x, y } = cellCenter(r, c);
 
   if (state.bomb[r][c]) {
-    triggerGameOver(r, c);
+    // Hitting a bomb costs a heart, not the whole run. The cell stays revealed
+    // (shown as a spent 💣) so it can't be hit again. Only losing all hearts
+    // fails the level — a single slip near the finish no longer means redo.
+    state.hearts--;
+    renderHearts();
+    if (state.hearts <= 0) {
+      triggerGameOver(r, c); // handles the dramatic particles/shake/flash/sound
+    } else {
+      burst(x, y, "#ff5470", 26, state.cellSize * 0.16);
+      burst(x, y, "#ffcb47", 12, state.cellSize * 0.12);
+      shake = 16;
+      Sound.bomb();
+      haptic([50, 30, 80]);
+      flashLayer.className = "flash-bomb";
+      setTimeout(() => { flashLayer.className = ""; }, 400);
+      popText(x, y - state.cellSize * 0.2, "-1 ❤️", "#ff5470");
+    }
     return true;
   }
 
@@ -754,7 +782,7 @@ function triggerGameOver(r, c) {
     continueBtn.disabled = state.usedContinueThisRun;
     continueBtn.innerHTML = state.usedContinueThisRun
       ? "No continues left"
-      : '<span class="reward-tag">AD</span> Continue — clear the bombs';
+      : `<span class="reward-tag">AD</span> Refill ❤️ &amp; keep going`;
     restartBtn.textContent = `Retry level ${state.level}`;
     show(gameOverScreen);
   }, 700);
@@ -794,10 +822,9 @@ continueBtn.addEventListener("click", () => {
   playMockAd(2000, () => {
     state.usedContinueThisRun = true;
     hide(gameOverScreen);
-    for (let r = 0; r < state.gridSize; r++)
-      for (let c = 0; c < state.gridSize; c++) state.bomb[r][c] = false;
-    // recompute so progress bar stays coherent now that everything is safe
-    state.nonBombTotal = state.gridSize * state.gridSize;
+    // refill hearts and resume the same board (bombs already hit stay revealed)
+    state.hearts = MAX_HEARTS;
+    renderHearts();
     state.playing = true;
     updateHud();
   });
