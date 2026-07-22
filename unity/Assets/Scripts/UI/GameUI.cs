@@ -393,7 +393,9 @@ namespace Reveal.UI
             for (int i = 0; i < Scenes.Count; i++)
             {
                 bool got = collection.Contains(i);
-                UIFactory.RoundedPanel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#20233a"), 16, got);
+                var cell = UIFactory.RoundedPanel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#20233a"), 16, got);
+                var pic = got ? GameArt.Picture(Scenes.All[i].Motif) : null;
+                if (pic != null) { cell.sprite = GameArt.SpriteFrom(pic); cell.type = Image.Type.Simple; cell.preserveAspect = true; cell.color = Color.white; }
             }
         }
 

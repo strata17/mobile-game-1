@@ -75,7 +75,8 @@ namespace Reveal.Game
             _startTime = Time.time;
 
             var scene = Scenes.ForLevel(_level);
-            _pic = MotifPainter.Paint(scene);
+            var real = Reveal.UI.GameArt.Picture(scene.Motif);
+            _pic = real != null ? real : MotifPainter.Paint(scene);
             float sizePx = _ui.BoardHost.rect.width;
             if (sizePx <= 1) sizePx = 980;
             _view.Load(_board, _pic, sizePx);

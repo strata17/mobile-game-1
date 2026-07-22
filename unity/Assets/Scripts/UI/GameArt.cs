@@ -22,6 +22,18 @@ namespace Reveal.UI
             _mascot = Resources.Load<Texture2D>("Art/mascot");
         }
 
+        static readonly System.Collections.Generic.Dictionary<string, Texture2D> _pics
+            = new System.Collections.Generic.Dictionary<string, Texture2D>();
+
+        /// <summary>The hidden picture for a motif, or null to fall back to procedural.</summary>
+        public static Texture2D Picture(string motif)
+        {
+            if (_pics.TryGetValue(motif, out var t)) return t;
+            t = Resources.Load<Texture2D>("Art/pics/" + motif);
+            _pics[motif] = t;
+            return t;
+        }
+
         public static Texture2D Background { get { EnsureLoaded(); return _bg; } }
         public static Texture2D Logo { get { EnsureLoaded(); return _logo; } }
         public static Texture2D Mascot { get { EnsureLoaded(); return _mascot; } }
