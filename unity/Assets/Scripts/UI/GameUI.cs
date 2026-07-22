@@ -147,8 +147,8 @@ namespace Reveal.UI
             _tutHint.anchorMin = _tutHint.anchorMax = new Vector2(0.5f, 0.5f);
             _tutHint.pivot = new Vector2(0.5f, 0.5f);
             _tutHint.anchoredPosition = new Vector2(0, -40);
-            _tutHint.sizeDelta = new Vector2(560, 96);
-            var t = UIFactory.Label(_tutHint, "t", "Drag across the tiles to scratch", 30, _text, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _tutHint.sizeDelta = new Vector2(680, 96);
+            var t = UIFactory.Label(_tutHint, "t", "Drag to scratch · numbers warn of bombs nearby", 26, _text, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIFactory.Stretch(t.rectTransform);
             _tutHint.gameObject.AddComponent<Pulse>();
             _tutHint.gameObject.SetActive(false);
@@ -357,7 +357,7 @@ namespace Reveal.UI
             var snd = UIFactory.Button(card, "Sound", "Sound: On", _cardBg, _text, 34);
             ((RectTransform)snd.transform).sizeDelta = new Vector2(0, 100);
             snd.onClick.AddListener(() => { OnToggleSound?.Invoke(); snd.GetComponentInChildren<Text>().text = "Sound: " + (SaveSystem.SoundOn ? "On" : "Off"); });
-            UIFactory.Label(card, "Ver", "Reveal 3.0 · Unity · clear 70%, avoid bombs", 26, _muted)
+            UIFactory.Label(card, "Ver", "Reveal 3.0 · numbers show bombs nearby · clear 70%", 24, _muted)
                 .rectTransform.sizeDelta = new Vector2(0, 60);
             var done = UIFactory.Button(card, "Done", "Done", _primary, Color.white, 38);
             ((RectTransform)done.transform).sizeDelta = new Vector2(0, 110);

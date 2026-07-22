@@ -20,6 +20,7 @@ namespace Reveal.Game
         Board _board;
         RectTransform _rt;
         RawImage _picture;
+        RectTransform _clueLayer;
         Image[,] _covers;
         float _cell;
 
@@ -43,6 +44,10 @@ namespace Reveal.Game
             _picture = picGo.GetComponent<RawImage>();
             UIFactory.Stretch(_picture.rectTransform);
             _picture.raycastTarget = false;
+
+            // Clue layer sits above the picture, below the covers.
+            _clueLayer = UIFactory.Container(_rt, "Clues");
+            UIFactory.Stretch(_clueLayer);
 
             // Transparent raycast catcher for drag input across the whole board.
             var input = new GameObject("Input", typeof(RectTransform), typeof(Image));
@@ -72,6 +77,8 @@ namespace Reveal.Game
             if (_covers != null)
                 foreach (var c in _covers) if (c) Destroy(c.gameObject);
 
+            foreach (Transform t in _clueLayer) Destroy(t.gameObject);
+
             _covers = new Image[board.Size, board.Size];
             var scene = Scenes.ForLevel(board.Level);
             for (int r = 0; r < board.Size; r++)
@@ -79,19 +86,25 @@ namespace Reveal.Game
                     _covers[r, c] = MakeCover(r, c, scene, board.Bomb[r, c]);
 
             RefreshAll();
+
+            // Seed clues on the endowed (pre-revealed) safe tiles.
+            for (int r = 0; r < board.Size; r++)
+                for (int c = 0; c < board.Size; c++)
+                    if (board.Revealed[r, c] && !board.Bomb[r, c])
+                        ShowClue(r, c, board.Adj[r, c]);
         }
 
         Image MakeCover(int r, int c, Scene scene, bool bomb)
         {
+            // Bombs are hidden now — every cover is an identical glossy gem, so
+            // danger is deduced from the revealed clues, not seen on the cover.
             var go = new GameObject($"C{r}_{c}", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(_rt, false);
             var img = go.GetComponent<Image>();
             img.sprite = Art.RoundedRect(20, true);  // rounded + glossy gem
             img.type = Image.Type.Sliced;
             img.raycastTarget = false;
-            // Bright gem tint from the scene colour; bombs are a dark slate.
-            img.color = bomb ? UIFactory.Hex("#2b2f45")
-                             : Color.Lerp(scene.BgTop, Color.white, 0.28f);
+            img.color = Color.Lerp(scene.BgTop, Color.white, 0.28f);
 
             float gap = Mathf.Max(4f, _cell * 0.10f);
             var rt = img.rectTransform;
@@ -99,29 +112,68 @@ namespace Reveal.Game
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
             rt.anchoredPosition = CellCenter(r, c);
-
-            if (bomb)
-            {
-                // warning ring + dot so the danger reads without relying on colour alone
-                var ring = new GameObject("ring", typeof(RectTransform), typeof(Image));
-                ring.transform.SetParent(go.transform, false);
-                var ri = ring.GetComponent<Image>();
-                ri.sprite = Art.RoundedRect(20, false);
-                ri.type = Image.Type.Sliced;
-                ri.color = new Color(1f, 0.35f, 0.42f, 0.9f);
-                ri.raycastTarget = false;
-                var rrt = ri.rectTransform;
-                UIFactory.Stretch(rrt, _cell * 0.16f);
-                var inner = new GameObject("in", typeof(RectTransform), typeof(Image));
-                inner.transform.SetParent(ring.transform, false);
-                var ii = inner.GetComponent<Image>();
-                ii.sprite = Art.RoundedRect(20, true);
-                ii.type = Image.Type.Sliced;
-                ii.color = UIFactory.Hex("#2b2f45");
-                ii.raycastTarget = false;
-                UIFactory.Stretch(ii.rectTransform, _cell * 0.10f);
-            }
             return img;
+        }
+
+        static readonly Color[] DangerColors =
+        {
+            default,                          // 0 (unused)
+            new Color(1f, 0.85f, 0.30f),      // 1 - soft amber
+            new Color(1f, 0.62f, 0.24f),      // 2 - orange
+            new Color(1f, 0.37f, 0.42f),      // 3+ - red
+        };
+
+        /// <summary>
+        /// Reveal a Minesweeper-style clue on a safe cell: a small heat-coloured
+        /// disc with the adjacent-bomb count. Count 0 shows nothing so the
+        /// picture stays clean.
+        /// </summary>
+        public void ShowClue(int r, int c, int count)
+        {
+            if (count <= 0 || _clueLayer == null) return;
+            Color dc = DangerColors[Mathf.Min(count, 3)];
+
+            var go = new GameObject($"clue{r}_{c}", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(_clueLayer, false);
+            var disc = go.GetComponent<Image>();
+            disc.sprite = Art.RoundedRect(40, true);
+            disc.type = Image.Type.Sliced;
+            disc.raycastTarget = false;
+            disc.color = new Color(dc.r, dc.g, dc.b, 0.92f);
+            var rt = disc.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(_cell * 0.5f, _cell * 0.5f);
+            rt.anchoredPosition = CellCenter(r, c);
+
+            Color txt = count == 1 ? new Color(0.35f, 0.24f, 0.05f) : Color.white;
+            var t = UIFactory.Label(go.transform, "n", count.ToString(),
+                Mathf.RoundToInt(_cell * 0.34f), txt, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIFactory.Stretch(t.rectTransform);
+        }
+
+        /// <summary>Show every bomb (used on game over so the player sees the truth).</summary>
+        public void RevealBombs()
+        {
+            if (_board == null) return;
+            for (int r = 0; r < _board.Size; r++)
+                for (int c = 0; c < _board.Size; c++)
+                    if (_board.Bomb[r, c])
+                    {
+                        var go = new GameObject($"bomb{r}_{c}", typeof(RectTransform), typeof(Image));
+                        go.transform.SetParent(_rt, false);
+                        var img = go.GetComponent<Image>();
+                        img.sprite = Art.RoundedRect(20, true);
+                        img.type = Image.Type.Sliced;
+                        img.raycastTarget = false;
+                        img.color = new Color(1f, 0.30f, 0.38f, 0.95f);
+                        var rt = img.rectTransform;
+                        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+                        rt.pivot = new Vector2(0.5f, 0.5f);
+                        float gap = Mathf.Max(4f, _cell * 0.10f);
+                        rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
+                        rt.anchoredPosition = CellCenter(r, c);
+                    }
         }
 
         Vector2 CellCenter(int r, int c)

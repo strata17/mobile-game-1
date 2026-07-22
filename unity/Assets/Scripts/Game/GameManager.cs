@@ -113,11 +113,13 @@ namespace Reveal.Game
                     return;
                 case RevealResult.Safe:
                     _view.RevealTile(r, c);
+                    _view.ShowClue(r, c, _board.Adjacent(r, c));
                     _score += 10;
                     Sfx.Instance.Scratch();
                     break;
                 case RevealResult.Bonus:
                     _view.RevealTile(r, c);
+                    _view.ShowClue(r, c, _board.Adjacent(r, c));
                     AddCoins(GameConfig.BonusCoin);
                     Missions.Progress(MissionType.FindBonus, 1);
                     Missions.Progress(MissionType.EarnCoins, GameConfig.BonusCoin);
@@ -133,6 +135,7 @@ namespace Reveal.Game
                     break;
                 case RevealResult.Win:
                     _view.RevealTile(r, c);
+                    _view.ShowClue(r, c, _board.Adjacent(r, c));
                     Sfx.Instance.Win();
                     Haptics.Buzz();
                     LevelComplete();
@@ -201,6 +204,7 @@ namespace Reveal.Game
         {
             _playing = false;
             _ui.ShowInGame(false);
+            _view.RevealBombs();   // show where the bombs were — feels fair, not random
 
             // Near-miss framing (loss aversion): how close were they?
             int pct = Mathf.Min(99, Mathf.RoundToInt(_board.Progress * 100));
@@ -252,6 +256,7 @@ namespace Reveal.Game
             {
                 var res = _board.Reveal(r, c);
                 _view.RevealTile(r, c);
+                _view.ShowClue(r, c, _board.Adjacent(r, c));
                 Sfx.Instance.Coin();
                 if (res == RevealResult.Win) { LevelComplete(); return; }
                 _ui.SetHud(_coins, _level, _score, _best);
