@@ -11,7 +11,7 @@ namespace Reveal.UI
     public static class GameArt
     {
         static bool _loaded;
-        static Texture2D _bg, _logo, _mascot, _coin, _heartIcon, _chest, _starIcon, _flame, _gear, _splash;
+        static Texture2D _bg, _logo, _mascot, _mascotSad, _mascotHappy, _coin, _heartIcon, _chest, _starIcon, _flame, _gear, _splash, _bomb;
 
         static void EnsureLoaded()
         {
@@ -20,6 +20,9 @@ namespace Reveal.UI
             _bg = Resources.Load<Texture2D>("Art/bg");
             _logo = Resources.Load<Texture2D>("Art/logo");
             _mascot = Resources.Load<Texture2D>("Art/mascot");
+            _mascotSad = Resources.Load<Texture2D>("Art/mascot_sad");
+            _mascotHappy = Resources.Load<Texture2D>("Art/mascot_happy");
+            _bomb = Resources.Load<Texture2D>("Art/bomb");
             _coin = Resources.Load<Texture2D>("Art/coin");
             _heartIcon = Resources.Load<Texture2D>("Art/heart_icon");
             _chest = Resources.Load<Texture2D>("Art/chest");
@@ -56,6 +59,9 @@ namespace Reveal.UI
         public static Texture2D Background { get { EnsureLoaded(); return _bg; } }
         public static Texture2D Logo { get { EnsureLoaded(); return _logo; } }
         public static Texture2D Mascot { get { EnsureLoaded(); return _mascot; } }
+        public static Texture2D MascotSad { get { EnsureLoaded(); return _mascotSad; } }
+        public static Texture2D MascotHappy { get { EnsureLoaded(); return _mascotHappy; } }
+        public static Texture2D Bomb { get { EnsureLoaded(); return _bomb; } }
         public static Texture2D Coin { get { EnsureLoaded(); return _coin; } }
         public static Texture2D HeartIcon { get { EnsureLoaded(); return _heartIcon; } }
         public static Texture2D Chest { get { EnsureLoaded(); return _chest; } }

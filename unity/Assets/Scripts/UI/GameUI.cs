@@ -441,7 +441,8 @@ namespace Reveal.UI
                 _chestBadge = chestGo.GetComponent<RectTransform>();
                 _chestBadge.sizeDelta = new Vector2(0, 180);
             }
-            if (GameArt.Mascot != null) ImageFit(card, "Mascot", GameArt.Mascot, 220);
+            var celebrateMascot = GameArt.MascotHappy != null ? GameArt.MascotHappy : GameArt.Mascot;
+            if (celebrateMascot != null) ImageFit(card, "Mascot", celebrateMascot, 220);
 
             _starRow = UIFactory.Container(card, "StarRow");
             _starRow.sizeDelta = new Vector2(0, 80);
@@ -509,7 +510,8 @@ namespace Reveal.UI
         {
             _gameOver = Overlay("GameOver", out var card);
             _gameOver.gameObject.SetActive(false);
-            BuildBombBadge(card, 150);
+            if (GameArt.MascotSad != null) ImageFit(card, "SadMascot", GameArt.MascotSad, 260);
+            else BuildBombBadge(card, 150);
             UIFactory.Label(card, "Title", "Out of lives!", 60, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
                 .rectTransform.sizeDelta = new Vector2(0, 90);
             _nearMiss = UIFactory.Label(card, "Near", "", 34, _accent);
