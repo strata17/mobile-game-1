@@ -67,8 +67,10 @@ namespace Reveal.UI
             for (int x = 0; x < size; x++)
             {
                 float a = CornerAlpha(x, y, size, radius);
-                // feather the edge so it reads as a blurred shadow
-                a = Mathf.SmoothStep(0f, 1f, a) * 0.45f;
+                // feather the edge so it reads as a blurred shadow (kept
+                // subtle -- a strong flat alpha here reads as a hard dark
+                // ring traced around the element rather than a soft shadow)
+                a = Mathf.SmoothStep(0f, 1f, a) * 0.22f;
                 px[y * size + x] = new Color(0f, 0f, 0f, a);
             }
             tex.SetPixels32(px);

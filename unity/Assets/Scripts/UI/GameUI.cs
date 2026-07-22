@@ -98,6 +98,16 @@ namespace Reveal.UI
                 UIFactory.Stretch(gt.rectTransform);
             }
 
+            // Frosted backing behind stats/progress/hearts so that text and
+            // icons keep contrast regardless of the busy sky artwork behind
+            // them -- without this, light-grey labels directly over a warm,
+            // bright background become nearly unreadable.
+            var hudBg = UIFactory.RoundedPanel(_chrome, "HudBg", new Color(_cardBg.r, _cardBg.g, _cardBg.b, 0.55f), 36).rectTransform;
+            hudBg.anchorMin = new Vector2(0, 1); hudBg.anchorMax = new Vector2(1, 1);
+            hudBg.pivot = new Vector2(0.5f, 1);
+            hudBg.sizeDelta = new Vector2(-60, 300);
+            hudBg.anchoredPosition = new Vector2(0, -125);
+
             // Stats row
             var stats = UIFactory.Container(_chrome, "Stats");
             stats.anchorMin = new Vector2(0, 1); stats.anchorMax = new Vector2(1, 1);

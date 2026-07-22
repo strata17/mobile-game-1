@@ -170,7 +170,7 @@ namespace Reveal.Game
             var rt = disc.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(_cell * 0.58f, _cell * 0.58f);
+            rt.sizeDelta = new Vector2(_cell * 0.46f, _cell * 0.46f);
             rt.anchoredPosition = CellCenter(r, c);
 
             // Dark rim so the badge pops against any picture behind it.
@@ -180,7 +180,7 @@ namespace Reveal.Game
 
             Color txt = count == 1 ? new Color(0.35f, 0.24f, 0.05f) : Color.white;
             var t = UIFactory.Label(go.transform, "n", count.ToString(),
-                Mathf.RoundToInt(_cell * 0.36f), txt, TextAnchor.MiddleCenter, FontStyle.Bold);
+                Mathf.RoundToInt(_cell * 0.28f), txt, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIFactory.Stretch(t.rectTransform);
             var textOutline = t.gameObject.AddComponent<Outline>();
             textOutline.effectColor = new Color(0f, 0f, 0f, 0.4f);
