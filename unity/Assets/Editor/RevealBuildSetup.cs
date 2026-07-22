@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEditor.Build;
 using UnityEngine;
 
 namespace Reveal.EditorTools
@@ -30,8 +29,8 @@ namespace Reveal.EditorTools
             PlayerSettings.productName = ProductName;
             PlayerSettings.companyName = CompanyName;
 
-            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, BundleId);
-            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, BundleId);
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, BundleId);
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, BundleId);
 
             // Portrait, one-handed casual game.
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
