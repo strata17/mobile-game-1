@@ -75,6 +75,8 @@ namespace Reveal.Core
             var gm = services.AddComponent<GameManager>();
             gm.Init(ui, view);
 
+            SplashScreen.ShowIfAvailable(canvasGo.transform);
+
             Application.targetFrameRate = 60;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
         }

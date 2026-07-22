@@ -196,7 +196,7 @@ namespace Reveal.Game
 
             _ui.ShowInGame(false);
             _ui.SetHud(_coins, _level, _score, _best);
-            _ui.ShowLevelComplete(_level - 1, points, coins, unlock, stars);
+            _ui.ShowLevelComplete(_level - 1, points, coins, unlock, stars, isChest);
             RefreshMenu();
         }
 

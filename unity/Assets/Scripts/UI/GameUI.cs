@@ -27,8 +27,11 @@ namespace Reveal.UI
         // Overlays
         RectTransform _menu, _levelComplete, _gameOver, _settings;
         Text _lcTitle, _lcLevel, _lcPoints, _lcCoins, _unlockNote, _starText;
+        RectTransform _starRow, _chestBadge;
+        Image[] _starImages;
         Text _goScore, _nearMiss;
         Text _chapterLabel, _streakLabel, _collectionCount, _menuCoins;
+        RectTransform _streakRow;
         Image _journeyFill;
         Button _dailyBtn;
         RectTransform _missionsList, _collectionRow;
@@ -73,13 +76,27 @@ namespace Reveal.UI
             top.anchoredPosition = new Vector2(0, -20);
 
             var coinPill = UIFactory.RoundedPanel(top, "CoinPill", _cardBg, 32, true).rectTransform;
-            UIFactory.Anchor(coinPill, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-30, 0), new Vector2(200, 70));
-            _coins = UIFactory.Label(coinPill, "Coins", "0", 40, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIFactory.Stretch(_coins.rectTransform);
+            UIFactory.Anchor(coinPill, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-30, 0), new Vector2(210, 70));
+            IconOn(coinPill, GameArt.Coin, new Vector2(0, 0.5f), new Vector2(20, 0), 44);
+            _coins = UIFactory.Label(coinPill, "Coins", "0", 36, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleRight, FontStyle.Bold);
+            _coins.rectTransform.anchorMin = new Vector2(0, 0); _coins.rectTransform.anchorMax = new Vector2(1, 1);
+            _coins.rectTransform.offsetMin = new Vector2(56, 0); _coins.rectTransform.offsetMax = new Vector2(-20, 0);
 
-            var gear = UIFactory.Button(top, "Gear", "•••", _cardBg, _text, 34);
-            UIFactory.Anchor((RectTransform)gear.transform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(30, 0), new Vector2(72, 72));
-            gear.onClick.AddListener(() => OnSettings?.Invoke());
+            var gear = UIFactory.RoundedPanel(top, "Gear", _cardBg, 26, true);
+            var gearRt = gear.rectTransform;
+            UIFactory.Anchor(gearRt, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(30, 0), new Vector2(72, 72));
+            gear.gameObject.AddComponent<Button>().onClick.AddListener(() => OnSettings?.Invoke());
+            gear.gameObject.AddComponent<PressPop>();
+            if (GameArt.Gear != null)
+            {
+                var gi = IconOn(gearRt, GameArt.Gear, new Vector2(0.5f, 0.5f), Vector2.zero, 40);
+                gi.rectTransform.anchorMin = gi.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            }
+            else
+            {
+                var gt = UIFactory.Label(gear.transform, "L", "•••", 34, _text, TextAnchor.MiddleCenter, FontStyle.Bold);
+                UIFactory.Stretch(gt.rectTransform);
+            }
 
             // Stats row
             var stats = UIFactory.Container(_chrome, "Stats");
@@ -210,6 +227,23 @@ namespace Reveal.UI
             return ov;
         }
 
+        /// <summary>A small square icon anchored at a point (e.g. inside a pill/button).</summary>
+        Image IconOn(RectTransform parent, Texture2D tex, Vector2 anchor, Vector2 offset, float size)
+        {
+            var go = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            if (tex != null) { img.sprite = GameArt.SpriteFrom(tex); img.preserveAspect = true; }
+            else img.color = new Color(0, 0, 0, 0);
+            img.raycastTarget = false;
+            var rt = img.rectTransform;
+            rt.anchorMin = rt.anchorMax = anchor;
+            rt.pivot = anchor;
+            rt.anchoredPosition = offset;
+            rt.sizeDelta = new Vector2(size, size);
+            return img;
+        }
+
         /// <summary>An aspect-preserving image row (fixed height, full width).</summary>
         Image ImageFit(Transform parent, string name, Texture2D tex, float height)
         {
@@ -258,8 +292,10 @@ namespace Reveal.UI
             coinPill.pivot = new Vector2(1, 1);
             coinPill.anchoredPosition = new Vector2(-30, -36);
             coinPill.sizeDelta = new Vector2(230, 74);
-            _menuCoins = UIFactory.Label(coinPill, "c", "0", 32, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIFactory.Stretch(_menuCoins.rectTransform);
+            IconOn(coinPill, GameArt.Coin, new Vector2(0, 0.5f), new Vector2(18, 0), 46);
+            _menuCoins = UIFactory.Label(coinPill, "c", "0", 32, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleRight, FontStyle.Bold);
+            _menuCoins.rectTransform.anchorMin = new Vector2(0, 0); _menuCoins.rectTransform.anchorMax = new Vector2(1, 1);
+            _menuCoins.rectTransform.offsetMin = new Vector2(58, 0); _menuCoins.rectTransform.offsetMax = new Vector2(-18, 0);
 
             if (GameArt.Mascot != null) HeroImage(_menu, "Mascot", GameArt.Mascot, 245, 600, 330);
 
@@ -269,8 +305,28 @@ namespace Reveal.UI
                 UIFactory.Label(_menu, "Title", "REVEAL", 110, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
                     .rectTransform.anchoredPosition = new Vector2(0, 640);
 
-            _streakLabel = UIFactory.Label(card, "Streak", "", 28, _accent, TextAnchor.MiddleCenter, FontStyle.Bold);
-            _streakLabel.rectTransform.sizeDelta = new Vector2(0, 40);
+            _streakRow = UIFactory.Container(card, "StreakRow");
+            _streakRow.sizeDelta = new Vector2(0, 44);
+            var streakInner = UIFactory.Container(_streakRow, "StreakInner");
+            streakInner.anchorMin = streakInner.anchorMax = new Vector2(0.5f, 0.5f);
+            streakInner.pivot = new Vector2(0.5f, 0.5f);
+            var streakLayout = streakInner.gameObject.AddComponent<HorizontalLayoutGroup>();
+            streakLayout.childAlignment = TextAnchor.MiddleCenter; streakLayout.spacing = 8;
+            streakLayout.childControlWidth = false; streakLayout.childControlHeight = false;
+            var streakFit = streakInner.gameObject.AddComponent<ContentSizeFitter>();
+            streakFit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            streakFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            if (GameArt.Flame != null)
+            {
+                var fi = new GameObject("Flame", typeof(RectTransform), typeof(Image));
+                fi.transform.SetParent(streakInner, false);
+                var fimg = fi.GetComponent<Image>();
+                fimg.sprite = GameArt.SpriteFrom(GameArt.Flame);
+                fimg.preserveAspect = true;
+                fi.GetComponent<RectTransform>().sizeDelta = new Vector2(36, 36);
+            }
+            _streakLabel = UIFactory.Label(streakInner, "Streak", "", 28, _accent, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _streakLabel.rectTransform.sizeDelta = new Vector2(300, 40);
 
             _chapterLabel = UIFactory.Label(card, "Chapter", "Chapter 1", 34, _muted);
             _chapterLabel.rectTransform.sizeDelta = new Vector2(0, 46);
@@ -310,18 +366,73 @@ namespace Reveal.UI
         {
             _levelComplete = Overlay("LevelComplete", out var card);
             _levelComplete.gameObject.SetActive(false);
+            if (GameArt.Chest != null)
+            {
+                var chestGo = new GameObject("ChestBadge", typeof(RectTransform), typeof(Image));
+                chestGo.transform.SetParent(card, false);
+                var cimg = chestGo.GetComponent<Image>();
+                cimg.sprite = GameArt.SpriteFrom(GameArt.Chest);
+                cimg.preserveAspect = true;
+                _chestBadge = chestGo.GetComponent<RectTransform>();
+                _chestBadge.sizeDelta = new Vector2(0, 180);
+            }
             if (GameArt.Mascot != null) ImageFit(card, "Mascot", GameArt.Mascot, 220);
-            _starText = UIFactory.Label(card, "Stars", "★ ★ ★", 64, UIFactory.Hex("#ffd76a"));
-            _starText.supportRichText = true;
-            _starText.rectTransform.sizeDelta = new Vector2(0, 90);
+
+            _starRow = UIFactory.Container(card, "StarRow");
+            _starRow.sizeDelta = new Vector2(0, 80);
+            var starInner = UIFactory.Container(_starRow, "StarInner");
+            starInner.anchorMin = starInner.anchorMax = new Vector2(0.5f, 0.5f);
+            starInner.pivot = new Vector2(0.5f, 0.5f);
+            var starLayout = starInner.gameObject.AddComponent<HorizontalLayoutGroup>();
+            starLayout.childAlignment = TextAnchor.MiddleCenter; starLayout.spacing = 14;
+            starLayout.childControlWidth = false; starLayout.childControlHeight = false;
+            var starFit = starInner.gameObject.AddComponent<ContentSizeFitter>();
+            starFit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            starFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            _starImages = new Image[3];
+            for (int i = 0; i < 3; i++)
+            {
+                var sg = new GameObject($"Star{i}", typeof(RectTransform), typeof(Image));
+                sg.transform.SetParent(starInner, false);
+                var simg = sg.GetComponent<Image>();
+                if (GameArt.StarIcon != null) { simg.sprite = GameArt.SpriteFrom(GameArt.StarIcon); simg.preserveAspect = true; }
+                else simg.color = UIFactory.Hex("#ffd76a");
+                sg.GetComponent<RectTransform>().sizeDelta = new Vector2(70, 70);
+                _starImages[i] = simg;
+            }
+            if (GameArt.StarIcon == null)
+            {
+                _starText = UIFactory.Label(_starRow, "Stars", "★ ★ ★", 64, UIFactory.Hex("#ffd76a"));
+                UIFactory.Stretch(_starText.rectTransform);
+            }
+
             _lcTitle = UIFactory.Label(card, "Title", "Board Cleared!", 60, _text, TextAnchor.MiddleCenter, FontStyle.Bold);
             _lcTitle.rectTransform.sizeDelta = new Vector2(0, 90);
             _lcLevel = UIFactory.Label(card, "Lvl", "Level 1 complete", 34, _muted);
             _lcLevel.rectTransform.sizeDelta = new Vector2(0, 50);
             _lcPoints = UIFactory.Label(card, "Pts", "+0 pts", 40, _accent, TextAnchor.MiddleCenter, FontStyle.Bold);
             _lcPoints.rectTransform.sizeDelta = new Vector2(0, 60);
-            _lcCoins = UIFactory.Label(card, "Coins", "+0 coins", 36, UIFactory.Hex("#ffd76a"));
-            _lcCoins.rectTransform.sizeDelta = new Vector2(0, 50);
+            var coinsRow = UIFactory.Container(card, "CoinsRow");
+            coinsRow.sizeDelta = new Vector2(0, 56);
+            var coinsInner = UIFactory.Container(coinsRow, "CoinsInner");
+            coinsInner.anchorMin = coinsInner.anchorMax = new Vector2(0.5f, 0.5f);
+            coinsInner.pivot = new Vector2(0.5f, 0.5f);
+            var coinsLayout = coinsInner.gameObject.AddComponent<HorizontalLayoutGroup>();
+            coinsLayout.childAlignment = TextAnchor.MiddleCenter; coinsLayout.spacing = 8;
+            coinsLayout.childControlWidth = false; coinsLayout.childControlHeight = false;
+            var coinsFit = coinsInner.gameObject.AddComponent<ContentSizeFitter>();
+            coinsFit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            coinsFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            if (GameArt.Coin != null)
+            {
+                var ci = new GameObject("Coin", typeof(RectTransform), typeof(Image));
+                ci.transform.SetParent(coinsInner, false);
+                var cimg2 = ci.GetComponent<Image>();
+                cimg2.sprite = GameArt.SpriteFrom(GameArt.Coin); cimg2.preserveAspect = true;
+                ci.GetComponent<RectTransform>().sizeDelta = new Vector2(36, 36);
+            }
+            _lcCoins = UIFactory.Label(coinsInner, "Coins", "+0", 36, UIFactory.Hex("#ffd76a"));
+            _lcCoins.rectTransform.sizeDelta = new Vector2(160, 50);
             _unlockNote = UIFactory.Label(card, "Unlock", "", 30, UIFactory.Hex("#7fe0a0"));
             _unlockNote.rectTransform.sizeDelta = new Vector2(0, 50);
             var next = UIFactory.Button(card, "Next", "NEXT LEVEL →", _primary, Color.white, 42);
@@ -395,9 +506,23 @@ namespace Reveal.UI
             foreach (Transform t in _heartsRow) Destroy(t.gameObject);
             for (int i = 0; i < GameConfig.MaxHearts; i++)
             {
-                var h = UIFactory.Label(_heartsRow, "H", i < hearts ? "♥" : "♡", 40,
-                    i < hearts ? UIFactory.Hex("#ff5f7e") : _muted);
-                h.rectTransform.sizeDelta = new Vector2(44, 44);
+                bool full = i < hearts;
+                if (GameArt.HeartIcon != null)
+                {
+                    var go = new GameObject("H", typeof(RectTransform), typeof(Image));
+                    go.transform.SetParent(_heartsRow, false);
+                    var img = go.GetComponent<Image>();
+                    img.sprite = GameArt.SpriteFrom(GameArt.HeartIcon);
+                    img.preserveAspect = true;
+                    img.color = full ? Color.white : new Color(1f, 1f, 1f, 0.25f);
+                    go.GetComponent<RectTransform>().sizeDelta = new Vector2(44, 44);
+                }
+                else
+                {
+                    var h = UIFactory.Label(_heartsRow, "H", full ? "♥" : "♡", 40,
+                        full ? UIFactory.Hex("#ff5f7e") : _muted);
+                    h.rectTransform.sizeDelta = new Vector2(44, 44);
+                }
             }
         }
 
@@ -417,18 +542,24 @@ namespace Reveal.UI
         public void ShowMenu(bool show) => _menu.gameObject.SetActive(show);
         public void ShowSettings(bool show) => _settings.gameObject.SetActive(show);
 
-        public void ShowLevelComplete(int level, int points, int coins, string unlock, int stars)
+        public void ShowLevelComplete(int level, int points, int coins, string unlock, int stars, bool isChest)
         {
-            if (_starText != null)
+            if (_starImages != null)
+            {
+                for (int i = 0; i < _starImages.Length; i++)
+                    _starImages[i].color = i < stars ? Color.white : new Color(1f, 1f, 1f, 0.22f);
+            }
+            else if (_starText != null)
             {
                 string on = "<color=#ffd76a>★</color>";
                 string off = "<color=#3a3f55>★</color>";
                 _starText.text = string.Join(" ",
                     new[] { stars >= 1 ? on : off, stars >= 2 ? on : off, stars >= 3 ? on : off });
             }
+            if (_chestBadge != null) _chestBadge.gameObject.SetActive(isChest);
             _lcLevel.text = $"Level {level} complete";
             _lcPoints.text = $"+{points} pts";
-            _lcCoins.text = $"+{coins} coins";
+            _lcCoins.text = $"+{coins}";
             _unlockNote.text = unlock ?? "";
             _unlockNote.gameObject.SetActive(!string.IsNullOrEmpty(unlock));
             _levelComplete.gameObject.SetActive(true);
@@ -448,6 +579,7 @@ namespace Reveal.UI
         public void SetMenuMeta(int streak, int level, HashSet<int> collection)
         {
             _streakLabel.text = streak > 0 ? $"{streak}-DAY STREAK" : "";
+            _streakRow.gameObject.SetActive(streak > 0);
             _chapterLabel.text = $"Chapter {GameConfig.ChapterOf(level)} · Level {level}";
             int into = (level - 1) % GameConfig.ChestEvery;
             float jf = (float)into / GameConfig.ChestEvery;

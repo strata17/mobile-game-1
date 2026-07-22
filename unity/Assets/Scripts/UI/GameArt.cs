@@ -11,7 +11,7 @@ namespace Reveal.UI
     public static class GameArt
     {
         static bool _loaded;
-        static Texture2D _bg, _logo, _mascot;
+        static Texture2D _bg, _logo, _mascot, _coin, _heartIcon, _chest, _starIcon, _flame, _gear, _splash;
 
         static void EnsureLoaded()
         {
@@ -20,6 +20,13 @@ namespace Reveal.UI
             _bg = Resources.Load<Texture2D>("Art/bg");
             _logo = Resources.Load<Texture2D>("Art/logo");
             _mascot = Resources.Load<Texture2D>("Art/mascot");
+            _coin = Resources.Load<Texture2D>("Art/coin");
+            _heartIcon = Resources.Load<Texture2D>("Art/heart_icon");
+            _chest = Resources.Load<Texture2D>("Art/chest");
+            _starIcon = Resources.Load<Texture2D>("Art/star_icon");
+            _flame = Resources.Load<Texture2D>("Art/flame");
+            _gear = Resources.Load<Texture2D>("Art/gear");
+            _splash = Resources.Load<Texture2D>("Art/splash");
         }
 
         static readonly System.Collections.Generic.Dictionary<string, Texture2D> _pics
@@ -49,6 +56,13 @@ namespace Reveal.UI
         public static Texture2D Background { get { EnsureLoaded(); return _bg; } }
         public static Texture2D Logo { get { EnsureLoaded(); return _logo; } }
         public static Texture2D Mascot { get { EnsureLoaded(); return _mascot; } }
+        public static Texture2D Coin { get { EnsureLoaded(); return _coin; } }
+        public static Texture2D HeartIcon { get { EnsureLoaded(); return _heartIcon; } }
+        public static Texture2D Chest { get { EnsureLoaded(); return _chest; } }
+        public static Texture2D StarIcon { get { EnsureLoaded(); return _starIcon; } }
+        public static Texture2D Flame { get { EnsureLoaded(); return _flame; } }
+        public static Texture2D Gear { get { EnsureLoaded(); return _gear; } }
+        public static Texture2D Splash { get { EnsureLoaded(); return _splash; } }
 
         public static Sprite SpriteFrom(Texture2D tex)
         {
