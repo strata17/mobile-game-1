@@ -51,7 +51,9 @@ namespace Reveal.Core
             var bgGo = new GameObject("Background", typeof(RectTransform), typeof(RawImage));
             bgGo.transform.SetParent(canvasGo.transform, false);
             var bg = bgGo.GetComponent<RawImage>();
-            bg.texture = Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
+            var bgArt = GameArt.Background;
+            bg.texture = bgArt != null ? bgArt
+                : Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
             bg.raycastTarget = false;
             var bgRt = bg.rectTransform;
             bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;

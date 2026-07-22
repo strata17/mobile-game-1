@@ -1,0 +1,35 @@
+using UnityEngine;
+
+namespace Reveal.UI
+{
+    /// <summary>
+    /// Loads optional imported art (backgrounds, logo, mascot) from Resources.
+    /// Every getter returns null if the asset is absent, so the game runs on
+    /// procedural art until real assets are dropped into
+    /// Assets/Resources/Art/. This keeps the project buildable at all times.
+    /// </summary>
+    public static class GameArt
+    {
+        static bool _loaded;
+        static Texture2D _bg, _logo, _mascot;
+
+        static void EnsureLoaded()
+        {
+            if (_loaded) return;
+            _loaded = true;
+            _bg = Resources.Load<Texture2D>("Art/bg");
+            _logo = Resources.Load<Texture2D>("Art/logo");
+            _mascot = Resources.Load<Texture2D>("Art/mascot");
+        }
+
+        public static Texture2D Background { get { EnsureLoaded(); return _bg; } }
+        public static Texture2D Logo { get { EnsureLoaded(); return _logo; } }
+        public static Texture2D Mascot { get { EnsureLoaded(); return _mascot; } }
+
+        public static Sprite SpriteFrom(Texture2D tex)
+        {
+            if (tex == null) return null;
+            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+        }
+    }
+}

@@ -153,7 +153,8 @@ namespace Reveal.UI
                 var go = new GameObject(name, typeof(RectTransform), typeof(RawImage));
                 go.transform.SetParent(_root, false);
                 var ri = go.GetComponent<RawImage>();
-                ri.texture = Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
+                var bgArt = GameArt.Background;
+                ri.texture = bgArt != null ? bgArt : Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
                 ov = go.GetComponent<RectTransform>();
             }
             else
@@ -182,17 +183,39 @@ namespace Reveal.UI
             return ov;
         }
 
+        /// <summary>An aspect-preserving image row (fixed height, full width).</summary>
+        Image ImageFit(Transform parent, string name, Texture2D tex, float height)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = GameArt.SpriteFrom(tex);
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            go.GetComponent<RectTransform>().sizeDelta = new Vector2(0, height);
+            return img;
+        }
+
         void BuildMenu()
         {
             _menu = Overlay("Menu", out var card, opaque: true);
+            // Frosted card so the cloud backdrop glows through behind the meta.
+            var cardImg = card.GetComponent<Image>();
+            cardImg.color = new Color(_cardBg.r, _cardBg.g, _cardBg.b, 0.86f);
 
             var coinPill = UIFactory.RoundedPanel(card, "MenuCoins", UIFactory.Hex("#0c0e18"), 26, true).rectTransform;
             coinPill.sizeDelta = new Vector2(0, 66);
             _menuCoins = UIFactory.Label(coinPill, "c", "0 coins", 30, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIFactory.Stretch(_menuCoins.rectTransform);
 
-            UIFactory.Label(card, "Title", "REVEAL", 100, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
-                .rectTransform.sizeDelta = new Vector2(0, 130);
+            if (GameArt.Mascot != null) ImageFit(card, "Mascot", GameArt.Mascot, 300);
+
+            if (GameArt.Logo != null)
+                ImageFit(card, "Logo", GameArt.Logo, 200);
+            else
+                UIFactory.Label(card, "Title", "REVEAL", 100, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
+                    .rectTransform.sizeDelta = new Vector2(0, 130);
+
             UIFactory.Label(card, "Tagline", "Scratch to uncover the hidden picture", 28, _muted)
                 .rectTransform.sizeDelta = new Vector2(0, 40);
             _streakLabel = UIFactory.Label(card, "Streak", "", 28, _accent, TextAnchor.MiddleCenter, FontStyle.Bold);
