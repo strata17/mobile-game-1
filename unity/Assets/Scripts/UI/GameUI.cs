@@ -28,7 +28,7 @@ namespace Reveal.UI
         RectTransform _menu, _levelComplete, _gameOver, _settings;
         Text _lcTitle, _lcLevel, _lcPoints, _lcCoins, _unlockNote;
         Text _goScore, _nearMiss;
-        Text _chapterLabel, _streakLabel, _collectionCount;
+        Text _chapterLabel, _streakLabel, _collectionCount, _menuCoins;
         Image _journeyFill;
         Button _dailyBtn;
         RectTransform _missionsList, _collectionRow;
@@ -185,9 +185,17 @@ namespace Reveal.UI
         void BuildMenu()
         {
             _menu = Overlay("Menu", out var card, opaque: true);
-            UIFactory.Label(card, "Title", "REVEAL", 96, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
+
+            var coinPill = UIFactory.RoundedPanel(card, "MenuCoins", UIFactory.Hex("#0c0e18"), 26, true).rectTransform;
+            coinPill.sizeDelta = new Vector2(0, 66);
+            _menuCoins = UIFactory.Label(coinPill, "c", "0 coins", 30, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIFactory.Stretch(_menuCoins.rectTransform);
+
+            UIFactory.Label(card, "Title", "REVEAL", 100, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
                 .rectTransform.sizeDelta = new Vector2(0, 130);
-            _streakLabel = UIFactory.Label(card, "Streak", "", 30, _accent);
+            UIFactory.Label(card, "Tagline", "Scratch to uncover the hidden picture", 28, _muted)
+                .rectTransform.sizeDelta = new Vector2(0, 40);
+            _streakLabel = UIFactory.Label(card, "Streak", "", 28, _accent, TextAnchor.MiddleCenter, FontStyle.Bold);
             _streakLabel.rectTransform.sizeDelta = new Vector2(0, 40);
 
             _chapterLabel = UIFactory.Label(card, "Chapter", "Chapter 1", 34, _muted);
@@ -200,9 +208,6 @@ namespace Reveal.UI
             _journeyFill.rectTransform.pivot = new Vector2(0, 0.5f);
             _journeyFill.rectTransform.offsetMin = Vector2.zero;
             _journeyFill.rectTransform.offsetMax = Vector2.zero;
-            _journeyFill.rectTransform.anchorMin = new Vector2(0, 0);
-            _journeyFill.rectTransform.anchorMax = new Vector2(0, 1);
-            _journeyFill.rectTransform.pivot = new Vector2(0, 0.5f);
 
             var play = UIFactory.Button(card, "Play", "PLAY", _primary, Color.white, 46);
             ((RectTransform)play.transform).sizeDelta = new Vector2(0, 130);
@@ -289,6 +294,7 @@ namespace Reveal.UI
         public void SetHud(int coins, int level, int score, int best)
         {
             _coins.text = coins.ToString();
+            if (_menuCoins != null) _menuCoins.text = coins + " coins";
             _level.text = level.ToString();
             _score.text = score.ToString();
             _best.text = best.ToString();
