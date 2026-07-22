@@ -7,8 +7,8 @@ scenes/prefabs) so the whole thing is reviewable and reproducible from source.
 
 ## Requirements
 
-- **Unity 2022.3 LTS** (see `ProjectSettings/ProjectVersion.txt`). Any 2022.3.x
-  works; newer LTS should import fine and may prompt an upgrade.
+- **Unity 6** (`6000.5.4f1`, see `ProjectSettings/ProjectVersion.txt`). Any
+  Unity 6 patch works; 2022.3 LTS also imports fine and may prompt an upgrade.
 - iOS build: Xcode + an Apple Developer account.
 - Android build: Android Build Support module (installed via Unity Hub).
 
