@@ -223,28 +223,52 @@ namespace Reveal.UI
             return img;
         }
 
+        /// <summary>Absolutely-placed, aspect-preserving hero image on the background.</summary>
+        void HeroImage(Transform parent, string name, Texture2D tex, float centerFromTop, float boxW, float boxH)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = GameArt.SpriteFrom(tex);
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            var rt = img.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0, -centerFromTop);
+            rt.sizeDelta = new Vector2(boxW, boxH);
+        }
+
         void BuildMenu()
         {
             _menu = Overlay("Menu", out var card, opaque: true);
-            // Frosted card so the cloud backdrop glows through behind the meta.
-            var cardImg = card.GetComponent<Image>();
-            cardImg.color = new Color(_cardBg.r, _cardBg.g, _cardBg.b, 0.86f);
 
-            var coinPill = UIFactory.RoundedPanel(card, "MenuCoins", UIFactory.Hex("#0c0e18"), 26, true).rectTransform;
-            coinPill.sizeDelta = new Vector2(0, 66);
-            _menuCoins = UIFactory.Label(coinPill, "c", "0 coins", 30, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleCenter, FontStyle.Bold);
+            // Card: a slim frosted panel in the lower two-thirds; the hero art
+            // (mascot + logo + coin) sits on the background above it.
+            var cardImg = card.GetComponent<Image>();
+            cardImg.color = new Color(_cardBg.r, _cardBg.g, _cardBg.b, 0.9f);
+            card.anchorMin = card.anchorMax = new Vector2(0.5f, 1f);
+            card.pivot = new Vector2(0.5f, 1f);
+            card.anchoredPosition = new Vector2(0, -620);
+            card.sizeDelta = new Vector2(940, 0);
+
+            // Hero art on the background
+            var coinPill = UIFactory.RoundedPanel(_menu, "MenuCoins", UIFactory.Hex("#0c0e18"), 34, true).rectTransform;
+            coinPill.anchorMin = coinPill.anchorMax = new Vector2(1, 1);
+            coinPill.pivot = new Vector2(1, 1);
+            coinPill.anchoredPosition = new Vector2(-30, -36);
+            coinPill.sizeDelta = new Vector2(230, 74);
+            _menuCoins = UIFactory.Label(coinPill, "c", "0", 32, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIFactory.Stretch(_menuCoins.rectTransform);
 
-            if (GameArt.Mascot != null) ImageFit(card, "Mascot", GameArt.Mascot, 300);
+            if (GameArt.Mascot != null) HeroImage(_menu, "Mascot", GameArt.Mascot, 245, 600, 330);
 
             if (GameArt.Logo != null)
-                ImageFit(card, "Logo", GameArt.Logo, 200);
+                HeroImage(_menu, "Logo", GameArt.Logo, 515, 640, 190);
             else
-                UIFactory.Label(card, "Title", "REVEAL", 100, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
-                    .rectTransform.sizeDelta = new Vector2(0, 130);
+                UIFactory.Label(_menu, "Title", "REVEAL", 110, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
+                    .rectTransform.anchoredPosition = new Vector2(0, 640);
 
-            UIFactory.Label(card, "Tagline", "Scratch to uncover the hidden picture", 28, _muted)
-                .rectTransform.sizeDelta = new Vector2(0, 40);
             _streakLabel = UIFactory.Label(card, "Streak", "", 28, _accent, TextAnchor.MiddleCenter, FontStyle.Bold);
             _streakLabel.rectTransform.sizeDelta = new Vector2(0, 40);
 
@@ -351,7 +375,7 @@ namespace Reveal.UI
         public void SetHud(int coins, int level, int score, int best)
         {
             _coins.text = coins.ToString();
-            if (_menuCoins != null) _menuCoins.text = coins + " coins";
+            if (_menuCoins != null) _menuCoins.text = coins.ToString();
             _level.text = level.ToString();
             _score.text = score.ToString();
             _best.text = best.ToString();
