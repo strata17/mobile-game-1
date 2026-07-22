@@ -58,6 +58,15 @@ namespace Reveal.Game
             _ui.OnCloseSettings = () => _ui.ShowSettings(false);
             _ui.OnReset = ResetProgress;
             _ui.OnToggleSound = () => SaveSystem.SoundOn = !SaveSystem.SoundOn;
+            _ui.OnHome = () =>
+            {
+                _playing = false;
+                _ui.ShowSettings(false);
+                _ui.HideLevelComplete();
+                _ui.HideGameOver();
+                _ui.ShowInGame(false);
+                RefreshMenu();
+            };
         }
 
         // ---------------- flow ----------------
@@ -85,12 +94,18 @@ namespace Reveal.Game
             _ui.SetHud(_coins, _level, _score, _best);
             _ui.SetHearts(_hearts);
             _ui.SetHintButton(_coins);
+            _ui.ShowTutorial(!SaveSystem.TutorialDone);
             UpdateProgress();
         }
 
         void OnScratch(int r, int c)
         {
             if (!_playing) return;
+            if (!SaveSystem.TutorialDone)
+            {
+                SaveSystem.TutorialDone = true;
+                _ui.ShowTutorial(false);
+            }
             var result = _board.Reveal(r, c);
             switch (result)
             {
@@ -172,7 +187,7 @@ namespace Reveal.Game
 
             _ui.ShowInGame(false);
             _ui.SetHud(_coins, _level, _score, _best);
-            _ui.ShowLevelComplete(_level - 1, points, coins, unlock);
+            _ui.ShowLevelComplete(_level - 1, points, coins, unlock, stars);
             RefreshMenu();
         }
 

@@ -16,7 +16,7 @@ namespace Reveal.UI
     public class GameUI : MonoBehaviour
     {
         // Callbacks (wired by GameManager)
-        public Action OnPlay, OnNextLevel, OnRetry, OnDaily, OnHint, OnContinueAd, OnSettings, OnCloseSettings, OnReset, OnToggleSound;
+        public Action OnPlay, OnNextLevel, OnRetry, OnDaily, OnHint, OnContinueAd, OnSettings, OnCloseSettings, OnReset, OnToggleSound, OnHome;
 
         // HUD
         Text _coins, _level, _score, _best, _progressPct;
@@ -26,7 +26,7 @@ namespace Reveal.UI
 
         // Overlays
         RectTransform _menu, _levelComplete, _gameOver, _settings;
-        Text _lcTitle, _lcLevel, _lcPoints, _lcCoins, _unlockNote;
+        Text _lcTitle, _lcLevel, _lcPoints, _lcCoins, _unlockNote, _starText;
         Text _goScore, _nearMiss;
         Text _chapterLabel, _streakLabel, _collectionCount, _menuCoins;
         Image _journeyFill;
@@ -50,6 +50,7 @@ namespace Reveal.UI
             BuildHud();
             BuildBoardHost();
             BuildControls();
+            BuildTutorial();
             BuildMenu();
             BuildLevelComplete();
             BuildGameOver();
@@ -130,6 +131,26 @@ namespace Reveal.UI
             _boardHost.pivot = new Vector2(0.5f, 0.5f);
             _boardHost.anchoredPosition = new Vector2(0, -40);
             _boardHost.sizeDelta = new Vector2(980, 980);
+        }
+
+        RectTransform _tutHint;
+
+        void BuildTutorial()
+        {
+            _tutHint = UIFactory.RoundedPanel(_root, "TutHint", new Color(0.02f, 0.03f, 0.06f, 0.82f), 26).rectTransform;
+            _tutHint.anchorMin = _tutHint.anchorMax = new Vector2(0.5f, 0.5f);
+            _tutHint.pivot = new Vector2(0.5f, 0.5f);
+            _tutHint.anchoredPosition = new Vector2(0, -40);
+            _tutHint.sizeDelta = new Vector2(560, 96);
+            var t = UIFactory.Label(_tutHint, "t", "Drag across the tiles to scratch", 30, _text, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIFactory.Stretch(t.rectTransform);
+            _tutHint.gameObject.AddComponent<Pulse>();
+            _tutHint.gameObject.SetActive(false);
+        }
+
+        public void ShowTutorial(bool show)
+        {
+            if (_tutHint != null) _tutHint.gameObject.SetActive(show);
         }
 
         void BuildControls()
@@ -260,7 +281,9 @@ namespace Reveal.UI
             _levelComplete = Overlay("LevelComplete", out var card);
             _levelComplete.gameObject.SetActive(false);
             if (GameArt.Mascot != null) ImageFit(card, "Mascot", GameArt.Mascot, 220);
-            UIFactory.Label(card, "Stars", "★ ★ ★", 60, UIFactory.Hex("#ffd76a")).rectTransform.sizeDelta = new Vector2(0, 90);
+            _starText = UIFactory.Label(card, "Stars", "★ ★ ★", 64, UIFactory.Hex("#ffd76a"));
+            _starText.supportRichText = true;
+            _starText.rectTransform.sizeDelta = new Vector2(0, 90);
             _lcTitle = UIFactory.Label(card, "Title", "Board Cleared!", 60, _text, TextAnchor.MiddleCenter, FontStyle.Bold);
             _lcTitle.rectTransform.sizeDelta = new Vector2(0, 90);
             _lcLevel = UIFactory.Label(card, "Lvl", "Level 1 complete", 34, _muted);
@@ -309,6 +332,10 @@ namespace Reveal.UI
             var done = UIFactory.Button(card, "Done", "Done", _primary, Color.white, 38);
             ((RectTransform)done.transform).sizeDelta = new Vector2(0, 110);
             done.onClick.AddListener(() => OnCloseSettings?.Invoke());
+
+            var home = UIFactory.Button(card, "Home", "Main menu", _cardBg, _text, 32);
+            ((RectTransform)home.transform).sizeDelta = new Vector2(0, 96);
+            home.onClick.AddListener(() => OnHome?.Invoke());
             var reset = UIFactory.Button(card, "Reset", "Reset all progress", _cardBg, UIFactory.Hex("#ff5f7e"), 30);
             ((RectTransform)reset.transform).sizeDelta = new Vector2(0, 90);
             reset.onClick.AddListener(() => OnReset?.Invoke());
@@ -360,14 +387,22 @@ namespace Reveal.UI
         public void ShowMenu(bool show) => _menu.gameObject.SetActive(show);
         public void ShowSettings(bool show) => _settings.gameObject.SetActive(show);
 
-        public void ShowLevelComplete(int level, int points, int coins, string unlock)
+        public void ShowLevelComplete(int level, int points, int coins, string unlock, int stars)
         {
+            if (_starText != null)
+            {
+                string on = "<color=#ffd76a>★</color>";
+                string off = "<color=#3a3f55>★</color>";
+                _starText.text = string.Join(" ",
+                    new[] { stars >= 1 ? on : off, stars >= 2 ? on : off, stars >= 3 ? on : off });
+            }
             _lcLevel.text = $"Level {level} complete";
             _lcPoints.text = $"+{points} pts";
             _lcCoins.text = $"+{coins} coins";
             _unlockNote.text = unlock ?? "";
             _unlockNote.gameObject.SetActive(!string.IsNullOrEmpty(unlock));
             _levelComplete.gameObject.SetActive(true);
+            Confetti.Burst(_levelComplete);
         }
         public void HideLevelComplete() => _levelComplete.gameObject.SetActive(false);
 
