@@ -144,26 +144,47 @@ namespace Reveal.UI
         }
 
         // ---------------- overlays ----------------
-        RectTransform Overlay(string name, out RectTransform card)
+        RectTransform Overlay(string name, out RectTransform card, bool opaque = false)
         {
-            var ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, 0.6f));
+            RectTransform ov;
+            if (opaque)
+            {
+                // Full opaque gradient — a real screen, nothing bleeds behind it.
+                var go = new GameObject(name, typeof(RectTransform), typeof(RawImage));
+                go.transform.SetParent(_root, false);
+                var ri = go.GetComponent<RawImage>();
+                ri.texture = Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
+                ov = go.GetComponent<RectTransform>();
+            }
+            else
+            {
+                ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, 0.62f));
+            }
             UIFactory.Stretch(ov);
+
             card = UIFactory.RoundedPanel(ov, "Card", _cardBg, 44).rectTransform;
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
             card.pivot = new Vector2(0.5f, 0.5f);
-            card.sizeDelta = new Vector2(900, 1200);
-            Art.AddShadow(card, 30f, -14f);
+            card.sizeDelta = new Vector2(920, 0);
+            var cardShadow = card.gameObject.AddComponent<Shadow>();
+            cardShadow.effectColor = new Color(0f, 0f, 0f, 0.4f);
+            cardShadow.effectDistance = new Vector2(0, -10);
+
             var vg = card.gameObject.AddComponent<VerticalLayoutGroup>();
             vg.childAlignment = TextAnchor.UpperCenter;
-            vg.spacing = 22; vg.padding = new RectOffset(50, 50, 50, 50);
+            vg.spacing = 24; vg.padding = new RectOffset(56, 56, 56, 56);
             vg.childControlHeight = false; vg.childControlWidth = true;
-            vg.childForceExpandHeight = false;
+            vg.childForceExpandHeight = false; vg.childForceExpandWidth = true;
+
+            // Auto-size the card height to fit its content (no dead space).
+            var fit = card.gameObject.AddComponent<ContentSizeFitter>();
+            fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             return ov;
         }
 
         void BuildMenu()
         {
-            _menu = Overlay("Menu", out var card);
+            _menu = Overlay("Menu", out var card, opaque: true);
             UIFactory.Label(card, "Title", "REVEAL", 96, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
                 .rectTransform.sizeDelta = new Vector2(0, 130);
             _streakLabel = UIFactory.Label(card, "Streak", "", 30, _accent);
@@ -174,6 +195,11 @@ namespace Reveal.UI
             var jtrack = UIFactory.RoundedPanel(card, "JTrack", UIFactory.Hex("#0c0e18"), 14).rectTransform;
             jtrack.sizeDelta = new Vector2(0, 22);
             _journeyFill = UIFactory.RoundedPanel(jtrack, "JFill", _primary, 14, true);
+            _journeyFill.rectTransform.anchorMin = new Vector2(0, 0);
+            _journeyFill.rectTransform.anchorMax = new Vector2(0, 1);
+            _journeyFill.rectTransform.pivot = new Vector2(0, 0.5f);
+            _journeyFill.rectTransform.offsetMin = Vector2.zero;
+            _journeyFill.rectTransform.offsetMax = Vector2.zero;
             _journeyFill.rectTransform.anchorMin = new Vector2(0, 0);
             _journeyFill.rectTransform.anchorMax = new Vector2(0, 1);
             _journeyFill.rectTransform.pivot = new Vector2(0, 0.5f);
@@ -270,8 +296,10 @@ namespace Reveal.UI
 
         public void SetProgress(float frac, int remaining)
         {
-            _progressFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(frac), 1);
-            _progressPct.text = Mathf.RoundToInt(Mathf.Clamp01(frac) * 100) + "%";
+            frac = Mathf.Clamp01(frac);
+            _progressFill.gameObject.SetActive(frac > 0.02f);
+            _progressFill.rectTransform.anchorMax = new Vector2(frac, 1);
+            _progressPct.text = Mathf.RoundToInt(frac * 100) + "%";
             _progressFill.color = frac >= GameConfig.GlowAt ? UIFactory.Hex("#7fe0a0") : _accent;
         }
 
@@ -327,7 +355,9 @@ namespace Reveal.UI
             _streakLabel.text = streak > 0 ? $"{streak}-DAY STREAK" : "";
             _chapterLabel.text = $"Chapter {GameConfig.ChapterOf(level)} · Level {level}";
             int into = (level - 1) % GameConfig.ChestEvery;
-            _journeyFill.rectTransform.anchorMax = new Vector2((float)into / GameConfig.ChestEvery, 1);
+            float jf = (float)into / GameConfig.ChestEvery;
+            _journeyFill.gameObject.SetActive(jf > 0.02f);
+            _journeyFill.rectTransform.anchorMax = new Vector2(jf, 1);
             _collectionCount.text = $"Gallery {collection.Count}/{Scenes.Count}";
 
             foreach (Transform t in _collectionRow) Destroy(t.gameObject);

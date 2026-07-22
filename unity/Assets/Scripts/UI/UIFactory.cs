@@ -78,18 +78,10 @@ namespace Reveal.UI
             var btn = go.GetComponent<Button>();
             btn.transition = Selectable.Transition.None; // handled by PressPop
 
-            // Extruded base (a darker shade behind + below the face).
-            var baseGo = new GameObject("Base", typeof(RectTransform), typeof(Image));
-            baseGo.transform.SetParent(go.transform, false);
-            baseGo.transform.SetAsFirstSibling();
-            var baseImg = baseGo.GetComponent<Image>();
-            baseImg.sprite = Art.RoundedRect(30, false);
-            baseImg.type = Image.Type.Sliced;
-            baseImg.raycastTarget = false;
-            baseImg.color = new Color(bg.r * 0.6f, bg.g * 0.6f, bg.b * 0.6f, bg.a);
-            var brt = baseImg.rectTransform;
-            brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one;
-            brt.offsetMin = new Vector2(0, -8); brt.offsetMax = new Vector2(0, -8);
+            // Soft depth via a built-in Shadow effect (robust under layout groups).
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
+            shadow.effectDistance = new Vector2(0, -5);
 
             var txt = Label(go.transform, "Label", label, size, fg, TextAnchor.MiddleCenter, FontStyle.Bold);
             var rt = txt.rectTransform;

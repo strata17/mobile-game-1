@@ -141,7 +141,8 @@ namespace Reveal.Game
         {
             if (_covers != null && _covers[r, c] != null)
             {
-                Destroy(_covers[r, c].gameObject);
+                _covers[r, c].raycastTarget = false;
+                _covers[r, c].gameObject.AddComponent<Reveal.UI.Vanish>(); // pop, then self-destruct
                 _covers[r, c] = null;
             }
         }
