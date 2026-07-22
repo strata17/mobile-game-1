@@ -124,8 +124,12 @@ namespace Reveal.UI
             prow.pivot = new Vector2(0.5f, 1);
             prow.sizeDelta = new Vector2(-80, 40);
             prow.anchoredPosition = new Vector2(0, -300);
-            var track = UIFactory.RoundedPanel(prow, "Track", UIFactory.Hex("#0c0e18"), 18).rectTransform;
+            var trackImg = UIFactory.RoundedPanel(prow, "Track", UIFactory.Hex("#0c0e18"), 18);
+            var track = trackImg.rectTransform;
             UIFactory.Stretch(track);
+            var trackEdge = trackImg.gameObject.AddComponent<Outline>();
+            trackEdge.effectColor = new Color(1f, 1f, 1f, 0.18f);
+            trackEdge.effectDistance = new Vector2(1f, -1f);
             _progressFill = UIFactory.RoundedPanel(track, "Fill", _accent, 18, true);
             _progressFill.rectTransform.anchorMin = new Vector2(0, 0);
             _progressFill.rectTransform.anchorMax = new Vector2(0, 1);
@@ -393,8 +397,15 @@ namespace Reveal.UI
 
             _chapterLabel = UIFactory.Label(card, "Chapter", "Chapter 1", 34, _muted);
             _chapterLabel.rectTransform.sizeDelta = new Vector2(0, 46);
-            var jtrack = UIFactory.RoundedPanel(card, "JTrack", UIFactory.Hex("#0c0e18"), 14).rectTransform;
+            var jtrackImg = UIFactory.RoundedPanel(card, "JTrack", UIFactory.Hex("#0c0e18"), 14);
+            var jtrack = jtrackImg.rectTransform;
             jtrack.sizeDelta = new Vector2(0, 22);
+            // A near-black track on a near-black card has almost no contrast
+            // at 0% progress -- without this it reads as a random black smear
+            // rather than a defined progress bar.
+            var jtrackEdge = jtrackImg.gameObject.AddComponent<Outline>();
+            jtrackEdge.effectColor = new Color(1f, 1f, 1f, 0.18f);
+            jtrackEdge.effectDistance = new Vector2(1f, -1f);
             _journeyFill = UIFactory.RoundedPanel(jtrack, "JFill", _primary, 14, true);
             _journeyFill.rectTransform.anchorMin = new Vector2(0, 0);
             _journeyFill.rectTransform.anchorMax = new Vector2(0, 1);
@@ -685,7 +696,13 @@ namespace Reveal.UI
                 var row = UIFactory.RoundedPanel(_missionsList, "m", UIFactory.Hex("#0c0e18"), 20).rectTransform;
                 row.sizeDelta = new Vector2(0, 64);
 
-                Texture2D icon = m.Type == MissionType.ClearLevels ? GameArt.Chest : GameArt.Coin;
+                // Distinct icon per mission type -- Chest and Coin alone are
+                // both warm-toned circular badges that blur together at
+                // small size, and FindBonus/EarnCoins previously shared the
+                // same Coin icon with nothing to tell them apart.
+                Texture2D icon = m.Type == MissionType.ClearLevels ? GameArt.Chest
+                    : m.Type == MissionType.FindBonus ? GameArt.StarIcon
+                    : GameArt.Coin;
                 float labelStart = 24;
                 if (icon != null)
                 {
@@ -698,8 +715,8 @@ namespace Reveal.UI
                     irt.anchorMin = irt.anchorMax = new Vector2(0, 0.5f);
                     irt.pivot = new Vector2(0, 0.5f);
                     irt.anchoredPosition = new Vector2(14, 0);
-                    irt.sizeDelta = new Vector2(38, 38);
-                    labelStart = 62;
+                    irt.sizeDelta = new Vector2(46, 46);
+                    labelStart = 70;
                 }
 
                 var label = UIFactory.Label(row, "t", $"{m.Text}", 26, m.Complete ? UIFactory.Hex("#7fe0a0") : _text, TextAnchor.MiddleLeft);
