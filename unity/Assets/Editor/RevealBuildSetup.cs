@@ -55,9 +55,16 @@ namespace Reveal.EditorTools
             var icon = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Art/icon.png");
             if (icon == null) return;
             var icons = new[] { icon };
-            PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Unknown, icons);
-            PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Android, icons);
-            PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.iOS, icons);
+            try
+            {
+                PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Unknown, icons);
+                PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Android, icons);
+                PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.iOS, icons);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[Reveal] Could not set app icon automatically; set it in Player Settings. " + e.Message);
+            }
         }
     }
 }

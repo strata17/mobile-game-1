@@ -159,9 +159,11 @@ namespace Reveal.Game
             _score += points;
             if (_score > _best) { _best = _score; SaveSystem.Best = _best; }
 
-            // Collection: record the revealed picture.
+            // Collection: record the revealed picture (note first-time unlocks).
+            int motifIndex = (_level - 1) % Scenes.Count;
             var col = SaveSystem.Collection;
-            col.Add((_level - 1) % Scenes.Count);
+            bool newPicture = !col.Contains(motifIndex);
+            col.Add(motifIndex);
             SaveSystem.Collection = col;
 
             // Missions
@@ -177,6 +179,10 @@ namespace Reveal.Game
                 int chestCoins = 50 * GameConfig.ChapterOf(_level);
                 coins += chestCoins;
                 unlock = $"Chapter chest! +{chestCoins} coins";
+            }
+            else if (newPicture)
+            {
+                unlock = "New picture added to your gallery!";
             }
 
             AddCoins(coins);
