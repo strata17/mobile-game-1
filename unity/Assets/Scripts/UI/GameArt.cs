@@ -25,11 +25,23 @@ namespace Reveal.UI
         static readonly System.Collections.Generic.Dictionary<string, Texture2D> _pics
             = new System.Collections.Generic.Dictionary<string, Texture2D>();
 
+        // Scenes without their own illustration reuse one of the finished five,
+        // so every board shows real art (never the geometric placeholder).
+        static readonly System.Collections.Generic.Dictionary<string, string> _alias
+            = new System.Collections.Generic.Dictionary<string, string>
+        {
+            { "moon", "star" }, { "rocket", "diamond" }, { "balloon", "heart" },
+            { "rainbow", "flower" }, { "cloud", "sun" }, { "planet", "diamond" },
+            { "bolt", "star" },
+        };
+
         /// <summary>The hidden picture for a motif, or null to fall back to procedural.</summary>
         public static Texture2D Picture(string motif)
         {
             if (_pics.TryGetValue(motif, out var t)) return t;
             t = Resources.Load<Texture2D>("Art/pics/" + motif);
+            if (t == null && _alias.TryGetValue(motif, out var alt))
+                t = Resources.Load<Texture2D>("Art/pics/" + alt);
             _pics[motif] = t;
             return t;
         }

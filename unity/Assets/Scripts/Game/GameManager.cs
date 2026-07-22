@@ -113,11 +113,13 @@ namespace Reveal.Game
                     _hearts--;
                     _ui.SetHearts(_hearts);
                     Sfx.Instance.Bomb();
+                    Haptics.Buzz();
                     if (_hearts <= 0) { GameOver(); return; }
                     break;
                 case RevealResult.Win:
                     _view.RevealTile(r, c);
                     Sfx.Instance.Win();
+                    Haptics.Buzz();
                     LevelComplete();
                     return;
             }

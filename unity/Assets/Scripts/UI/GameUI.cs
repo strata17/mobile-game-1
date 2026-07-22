@@ -259,6 +259,7 @@ namespace Reveal.UI
         {
             _levelComplete = Overlay("LevelComplete", out var card);
             _levelComplete.gameObject.SetActive(false);
+            if (GameArt.Mascot != null) ImageFit(card, "Mascot", GameArt.Mascot, 220);
             UIFactory.Label(card, "Stars", "★ ★ ★", 60, UIFactory.Hex("#ffd76a")).rectTransform.sizeDelta = new Vector2(0, 90);
             _lcTitle = UIFactory.Label(card, "Title", "Board Cleared!", 60, _text, TextAnchor.MiddleCenter, FontStyle.Bold);
             _lcTitle.rectTransform.sizeDelta = new Vector2(0, 90);
