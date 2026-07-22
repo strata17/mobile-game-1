@@ -43,10 +43,16 @@ namespace Reveal.UI
         readonly Color _muted = UIFactory.Hex("#9aa3c7");
 
         RectTransform _root;
+        RectTransform _chrome;
 
         public void Build(RectTransform root)
         {
             _root = root;
+            // In-game chrome lives inside the safe area; full-screen overlays don't.
+            _chrome = UIFactory.Container(_root, "Chrome");
+            UIFactory.Stretch(_chrome);
+            _chrome.gameObject.AddComponent<SafeArea>();
+
             BuildHud();
             BuildBoardHost();
             BuildControls();
@@ -60,7 +66,7 @@ namespace Reveal.UI
         // ---------------- HUD ----------------
         void BuildHud()
         {
-            var top = UIFactory.Container(_root, "TopBar");
+            var top = UIFactory.Container(_chrome, "TopBar");
             top.anchorMin = new Vector2(0, 1); top.anchorMax = new Vector2(1, 1);
             top.pivot = new Vector2(0.5f, 1);
             top.sizeDelta = new Vector2(0, 120);
@@ -76,7 +82,7 @@ namespace Reveal.UI
             gear.onClick.AddListener(() => OnSettings?.Invoke());
 
             // Stats row
-            var stats = UIFactory.Container(_root, "Stats");
+            var stats = UIFactory.Container(_chrome, "Stats");
             stats.anchorMin = new Vector2(0, 1); stats.anchorMax = new Vector2(1, 1);
             stats.pivot = new Vector2(0.5f, 1);
             stats.sizeDelta = new Vector2(0, 120);
@@ -86,7 +92,7 @@ namespace Reveal.UI
             _best = Stat(stats, "BEST", 0.32f, out _);
 
             // Progress
-            var prow = UIFactory.Container(_root, "Progress");
+            var prow = UIFactory.Container(_chrome, "Progress");
             prow.anchorMin = new Vector2(0, 1); prow.anchorMax = new Vector2(1, 1);
             prow.pivot = new Vector2(0.5f, 1);
             prow.sizeDelta = new Vector2(-80, 40);
@@ -101,7 +107,7 @@ namespace Reveal.UI
             _progressPct = UIFactory.Label(prow, "Pct", "0%", 26, _text);
             UIFactory.Stretch(_progressPct.rectTransform);
 
-            _heartsRow = UIFactory.Container(_root, "Hearts");
+            _heartsRow = UIFactory.Container(_chrome, "Hearts");
             _heartsRow.anchorMin = new Vector2(0.5f, 1); _heartsRow.anchorMax = new Vector2(0.5f, 1);
             _heartsRow.pivot = new Vector2(0.5f, 1);
             _heartsRow.sizeDelta = new Vector2(300, 50);
@@ -125,7 +131,7 @@ namespace Reveal.UI
 
         void BuildBoardHost()
         {
-            _boardHost = UIFactory.Container(_root, "BoardHost");
+            _boardHost = UIFactory.Container(_chrome, "BoardHost");
             _boardHost.anchorMin = new Vector2(0.5f, 0.5f);
             _boardHost.anchorMax = new Vector2(0.5f, 0.5f);
             _boardHost.pivot = new Vector2(0.5f, 0.5f);
@@ -137,7 +143,7 @@ namespace Reveal.UI
 
         void BuildTutorial()
         {
-            _tutHint = UIFactory.RoundedPanel(_root, "TutHint", new Color(0.02f, 0.03f, 0.06f, 0.82f), 26).rectTransform;
+            _tutHint = UIFactory.RoundedPanel(_chrome, "TutHint", new Color(0.02f, 0.03f, 0.06f, 0.82f), 26).rectTransform;
             _tutHint.anchorMin = _tutHint.anchorMax = new Vector2(0.5f, 0.5f);
             _tutHint.pivot = new Vector2(0.5f, 0.5f);
             _tutHint.anchoredPosition = new Vector2(0, -40);
@@ -155,7 +161,7 @@ namespace Reveal.UI
 
         void BuildControls()
         {
-            _hintBtn = UIFactory.Button(_root, "HintBtn", "Reveal a safe tile", _cardBg, _text, 32);
+            _hintBtn = UIFactory.Button(_chrome, "HintBtn", "Reveal a safe tile", _cardBg, _text, 32);
             var rt = (RectTransform)_hintBtn.transform;
             rt.anchorMin = new Vector2(0.5f, 0); rt.anchorMax = new Vector2(0.5f, 0);
             rt.pivot = new Vector2(0.5f, 0);
