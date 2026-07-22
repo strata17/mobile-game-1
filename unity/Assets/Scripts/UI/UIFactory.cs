@@ -24,6 +24,18 @@ namespace Reveal.UI
             return go.GetComponent<RectTransform>();
         }
 
+        /// <summary>A rounded, optionally glossy filled panel (candy surface).</summary>
+        public static Image RoundedPanel(Transform parent, string name, Color color, int radius = 28, bool glossy = false)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(radius, glossy);
+            img.type = Image.Type.Sliced;
+            img.color = color;
+            return img;
+        }
+
         public static RectTransform Container(Transform parent, string name)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -49,18 +61,42 @@ namespace Reveal.UI
             return t;
         }
 
+        /// <summary>
+        /// A "candy" button: rounded, glossy face sitting on a darker extruded
+        /// base, with a scale-down press animation. The 3D base is a sibling
+        /// image behind the face so the button reads as a physical, tappable
+        /// object rather than a flat rectangle.
+        /// </summary>
         public static Button Button(Transform parent, string name, string label, Color bg, Color fg, int size = 34)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(30, true);
+            img.type = Image.Type.Sliced;
             img.color = bg;
             var btn = go.GetComponent<Button>();
+            btn.transition = Selectable.Transition.None; // handled by PressPop
+
+            // Extruded base (a darker shade behind + below the face).
+            var baseGo = new GameObject("Base", typeof(RectTransform), typeof(Image));
+            baseGo.transform.SetParent(go.transform, false);
+            baseGo.transform.SetAsFirstSibling();
+            var baseImg = baseGo.GetComponent<Image>();
+            baseImg.sprite = Art.RoundedRect(30, false);
+            baseImg.type = Image.Type.Sliced;
+            baseImg.raycastTarget = false;
+            baseImg.color = new Color(bg.r * 0.6f, bg.g * 0.6f, bg.b * 0.6f, bg.a);
+            var brt = baseImg.rectTransform;
+            brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one;
+            brt.offsetMin = new Vector2(0, -8); brt.offsetMax = new Vector2(0, -8);
 
             var txt = Label(go.transform, "Label", label, size, fg, TextAnchor.MiddleCenter, FontStyle.Bold);
             var rt = txt.rectTransform;
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            go.AddComponent<PressPop>();
             return btn;
         }
 

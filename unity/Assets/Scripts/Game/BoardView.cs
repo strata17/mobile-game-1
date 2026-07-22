@@ -29,6 +29,15 @@ namespace Reveal.Game
             _rt.anchorMin = _rt.anchorMax = new Vector2(0.5f, 0.5f);
             _rt.pivot = new Vector2(0.5f, 0.5f);
 
+            // Round the whole board and clip children to it (rounded picture +
+            // tiles). The mask graphic doubles as the board's backing colour.
+            var frame = _rt.gameObject.AddComponent<Image>();
+            frame.sprite = Art.RoundedRect(40, false);
+            frame.type = Image.Type.Sliced;
+            frame.color = UIFactory.Hex("#0e1024");
+            var mask = _rt.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = true;
+
             var picGo = new GameObject("Picture", typeof(RectTransform), typeof(RawImage));
             picGo.transform.SetParent(_rt, false);
             _picture = picGo.GetComponent<RawImage>();
@@ -44,10 +53,13 @@ namespace Reveal.Game
             input.AddComponent<DragProxy>().Target = this;
         }
 
+        bool _shadowAdded;
+
         public void Load(Board board, Texture2D picture, float sizePx)
         {
             _board = board;
             _rt.sizeDelta = new Vector2(sizePx, sizePx);
+            if (!_shadowAdded) { Art.AddShadow(_rt, 40f, -16f); _shadowAdded = true; }
             _picture.texture = picture;
             _cell = sizePx / board.Size;
 
@@ -68,22 +80,40 @@ namespace Reveal.Game
             var go = new GameObject($"C{r}_{c}", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(_rt, false);
             var img = go.GetComponent<Image>();
-            img.sprite = UIFactory.SolidSprite();
+            img.sprite = Art.RoundedRect(20, true);  // rounded + glossy gem
             img.type = Image.Type.Sliced;
             img.raycastTarget = false;
-            img.color = bomb ? new Color(0.15f, 0.16f, 0.22f, 1f)
-                             : Color.Lerp(scene.BgTop, Color.white, 0.35f);
+            // Bright gem tint from the scene colour; bombs are a dark slate.
+            img.color = bomb ? UIFactory.Hex("#2b2f45")
+                             : Color.Lerp(scene.BgTop, Color.white, 0.28f);
 
+            float gap = Mathf.Max(4f, _cell * 0.10f);
             var rt = img.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); // top-left origin
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(_cell - 3f, _cell - 3f);
+            rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
             rt.anchoredPosition = CellCenter(r, c);
 
             if (bomb)
             {
-                var dot = UIFactory.Label(go.transform, "b", "✦", Mathf.RoundToInt(_cell * 0.5f), new Color(1f, 0.4f, 0.45f));
-                UIFactory.Stretch(dot.rectTransform);
+                // warning ring + dot so the danger reads without relying on colour alone
+                var ring = new GameObject("ring", typeof(RectTransform), typeof(Image));
+                ring.transform.SetParent(go.transform, false);
+                var ri = ring.GetComponent<Image>();
+                ri.sprite = Art.RoundedRect(20, false);
+                ri.type = Image.Type.Sliced;
+                ri.color = new Color(1f, 0.35f, 0.42f, 0.9f);
+                ri.raycastTarget = false;
+                var rrt = ri.rectTransform;
+                UIFactory.Stretch(rrt, _cell * 0.16f);
+                var inner = new GameObject("in", typeof(RectTransform), typeof(Image));
+                inner.transform.SetParent(ring.transform, false);
+                var ii = inner.GetComponent<Image>();
+                ii.sprite = Art.RoundedRect(20, true);
+                ii.type = Image.Type.Sliced;
+                ii.color = UIFactory.Hex("#2b2f45");
+                ii.raycastTarget = false;
+                UIFactory.Stretch(ii.rectTransform, _cell * 0.10f);
             }
             return img;
         }

@@ -65,12 +65,12 @@ namespace Reveal.UI
             top.sizeDelta = new Vector2(0, 120);
             top.anchoredPosition = new Vector2(0, -20);
 
-            var coinPill = UIFactory.Panel(top, "CoinPill", _cardBg);
+            var coinPill = UIFactory.RoundedPanel(top, "CoinPill", _cardBg, 32, true).rectTransform;
             UIFactory.Anchor(coinPill, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-30, 0), new Vector2(200, 70));
             _coins = UIFactory.Label(coinPill, "Coins", "0", 40, UIFactory.Hex("#ffd76a"), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIFactory.Stretch(_coins.rectTransform);
 
-            var gear = UIFactory.Button(top, "Gear", "⚙", _cardBg, _text, 40);
+            var gear = UIFactory.Button(top, "Gear", "•••", _cardBg, _text, 34);
             UIFactory.Anchor((RectTransform)gear.transform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(30, 0), new Vector2(72, 72));
             gear.onClick.AddListener(() => OnSettings?.Invoke());
 
@@ -90,9 +90,9 @@ namespace Reveal.UI
             prow.pivot = new Vector2(0.5f, 1);
             prow.sizeDelta = new Vector2(-80, 40);
             prow.anchoredPosition = new Vector2(0, -300);
-            var track = UIFactory.Panel(prow, "Track", _cardBg);
+            var track = UIFactory.RoundedPanel(prow, "Track", UIFactory.Hex("#0c0e18"), 18).rectTransform;
             UIFactory.Stretch(track);
-            _progressFill = UIFactory.Panel(track, "Fill", _accent).GetComponent<Image>();
+            _progressFill = UIFactory.RoundedPanel(track, "Fill", _accent, 18, true);
             _progressFill.rectTransform.anchorMin = new Vector2(0, 0);
             _progressFill.rectTransform.anchorMax = new Vector2(0, 1);
             _progressFill.rectTransform.pivot = new Vector2(0, 0.5f);
@@ -146,12 +146,13 @@ namespace Reveal.UI
         // ---------------- overlays ----------------
         RectTransform Overlay(string name, out RectTransform card)
         {
-            var ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, 0.85f));
+            var ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, 0.6f));
             UIFactory.Stretch(ov);
-            card = UIFactory.Panel(ov, "Card", _cardBg);
+            card = UIFactory.RoundedPanel(ov, "Card", _cardBg, 44).rectTransform;
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
             card.pivot = new Vector2(0.5f, 0.5f);
             card.sizeDelta = new Vector2(900, 1200);
+            Art.AddShadow(card, 30f, -14f);
             var vg = card.gameObject.AddComponent<VerticalLayoutGroup>();
             vg.childAlignment = TextAnchor.UpperCenter;
             vg.spacing = 22; vg.padding = new RectOffset(50, 50, 50, 50);
@@ -170,9 +171,9 @@ namespace Reveal.UI
 
             _chapterLabel = UIFactory.Label(card, "Chapter", "Chapter 1", 34, _muted);
             _chapterLabel.rectTransform.sizeDelta = new Vector2(0, 46);
-            var jtrack = UIFactory.Panel(card, "JTrack", UIFactory.Hex("#0c0e18"));
+            var jtrack = UIFactory.RoundedPanel(card, "JTrack", UIFactory.Hex("#0c0e18"), 14).rectTransform;
             jtrack.sizeDelta = new Vector2(0, 22);
-            _journeyFill = UIFactory.Panel(jtrack, "JFill", _primary).GetComponent<Image>();
+            _journeyFill = UIFactory.RoundedPanel(jtrack, "JFill", _primary, 14, true);
             _journeyFill.rectTransform.anchorMin = new Vector2(0, 0);
             _journeyFill.rectTransform.anchorMax = new Vector2(0, 1);
             _journeyFill.rectTransform.pivot = new Vector2(0, 0.5f);
@@ -224,7 +225,7 @@ namespace Reveal.UI
         {
             _gameOver = Overlay("GameOver", out var card);
             _gameOver.gameObject.SetActive(false);
-            UIFactory.Label(card, "Boom", "✸", 90, UIFactory.Hex("#ff5f7e")).rectTransform.sizeDelta = new Vector2(0, 120);
+            UIFactory.Label(card, "Boom", "!", 110, UIFactory.Hex("#ff5f7e"), TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform.sizeDelta = new Vector2(0, 120);
             UIFactory.Label(card, "Title", "Out of lives!", 60, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
                 .rectTransform.sizeDelta = new Vector2(0, 90);
             _nearMiss = UIFactory.Label(card, "Near", "", 34, _accent);
@@ -323,7 +324,7 @@ namespace Reveal.UI
 
         public void SetMenuMeta(int streak, int level, HashSet<int> collection)
         {
-            _streakLabel.text = streak > 0 ? $"🔥 {streak}-day streak" : "";
+            _streakLabel.text = streak > 0 ? $"{streak}-DAY STREAK" : "";
             _chapterLabel.text = $"Chapter {GameConfig.ChapterOf(level)} · Level {level}";
             int into = (level - 1) % GameConfig.ChestEvery;
             _journeyFill.rectTransform.anchorMax = new Vector2((float)into / GameConfig.ChestEvery, 1);
@@ -333,7 +334,7 @@ namespace Reveal.UI
             for (int i = 0; i < Scenes.Count; i++)
             {
                 bool got = collection.Contains(i);
-                var cell = UIFactory.Panel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#20233a"));
+                UIFactory.RoundedPanel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#20233a"), 16, got);
             }
         }
 
@@ -348,7 +349,7 @@ namespace Reveal.UI
             foreach (Transform t in _missionsList) Destroy(t.gameObject);
             foreach (var m in missions)
             {
-                var row = UIFactory.Panel(_missionsList, "m", UIFactory.Hex("#0c0e18"));
+                var row = UIFactory.RoundedPanel(_missionsList, "m", UIFactory.Hex("#0c0e18"), 20).rectTransform;
                 row.sizeDelta = new Vector2(0, 64);
                 var label = UIFactory.Label(row, "t", $"{m.Text}", 28, m.Complete ? UIFactory.Hex("#7fe0a0") : _text, TextAnchor.MiddleLeft);
                 label.rectTransform.anchorMin = new Vector2(0, 0); label.rectTransform.anchorMax = new Vector2(0.7f, 1);

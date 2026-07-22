@@ -47,6 +47,16 @@ namespace Reveal.Core
             scaler.referenceResolution = new Vector2(1080, 1920);
             scaler.matchWidthOrHeight = 0.5f;
 
+            // Vibrant full-screen gradient backdrop (behind all UI).
+            var bgGo = new GameObject("Background", typeof(RectTransform), typeof(RawImage));
+            bgGo.transform.SetParent(canvasGo.transform, false);
+            var bg = bgGo.GetComponent<RawImage>();
+            bg.texture = Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
+            bg.raycastTarget = false;
+            var bgRt = bg.rectTransform;
+            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+
             // Services
             var services = new GameObject("Services");
             services.transform.SetParent(root.transform, false);
