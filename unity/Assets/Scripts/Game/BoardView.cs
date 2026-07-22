@@ -61,6 +61,12 @@ namespace Reveal.Game
             _rt.sizeDelta = new Vector2(sizePx, sizePx);
             if (!_shadowAdded) { Art.AddShadow(_rt, 40f, -16f); _shadowAdded = true; }
             _picture.texture = picture;
+            // Center-crop the picture to a square so wide (16:9) or tall art
+            // fills the board without distortion.
+            float aw = picture.width, ah = picture.height;
+            if (aw > ah) { float u = ah / aw; _picture.uvRect = new Rect((1f - u) / 2f, 0f, u, 1f); }
+            else if (ah > aw) { float v = aw / ah; _picture.uvRect = new Rect(0f, (1f - v) / 2f, 1f, v); }
+            else _picture.uvRect = new Rect(0f, 0f, 1f, 1f);
             _cell = sizePx / board.Size;
 
             if (_covers != null)
