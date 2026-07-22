@@ -245,6 +245,21 @@ namespace Reveal.UI
             cardEdge.effectColor = new Color(1f, 1f, 1f, 0.07f);
             cardEdge.effectDistance = new Vector2(1.5f, 1.5f);
 
+            // Themed gradient fill instead of a flat near-black panel, which
+            // read as a generic dark-mode dialog clashing with the vibrant
+            // coral/purple palette everywhere else. Clipped to the card's
+            // rounded shape via Mask; drawn as the first child so it covers
+            // the plain Image fill but sits behind all card content.
+            card.gameObject.AddComponent<Mask>();
+            var cardGradGo = new GameObject("Gradient", typeof(RectTransform), typeof(RawImage));
+            cardGradGo.transform.SetParent(card, false);
+            cardGradGo.transform.SetAsFirstSibling();
+            var cardGrad = cardGradGo.GetComponent<RawImage>();
+            cardGrad.texture = Art.Gradient(UIFactory.Hex("#463a8f"), UIFactory.Hex("#150f30"));
+            cardGrad.raycastTarget = false;
+            UIFactory.Stretch(cardGrad.rectTransform);
+            cardGradGo.AddComponent<LayoutElement>().ignoreLayout = true;
+
             var vg = card.gameObject.AddComponent<VerticalLayoutGroup>();
             vg.childAlignment = TextAnchor.UpperCenter;
             vg.spacing = 24; vg.padding = new RectOffset(56, 56, 56, 56);
@@ -344,10 +359,8 @@ namespace Reveal.UI
         {
             _menu = Overlay("Menu", out var card, opaque: true);
 
-            // Card: a slim frosted panel in the lower two-thirds; the hero art
-            // (mascot + logo + coin) sits on the background above it.
-            var cardImg = card.GetComponent<Image>();
-            cardImg.color = new Color(_cardBg.r, _cardBg.g, _cardBg.b, 0.9f);
+            // Card: a slim gradient panel in the lower two-thirds; the hero
+            // art (mascot + logo + coin) sits on the background above it.
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 1f);
             card.pivot = new Vector2(0.5f, 1f);
             card.anchoredPosition = new Vector2(0, -620);
