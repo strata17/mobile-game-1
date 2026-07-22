@@ -83,6 +83,8 @@ namespace Reveal.UI
             shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
             shadow.effectDistance = new Vector2(0, -5);
 
+            AddGloss(go.transform);
+
             var txt = Label(go.transform, "Label", label, size, fg, TextAnchor.MiddleCenter, FontStyle.Bold);
             var rt = txt.rectTransform;
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
@@ -90,6 +92,25 @@ namespace Reveal.UI
 
             go.AddComponent<PressPop>();
             return btn;
+        }
+
+        /// <summary>
+        /// A soft top-highlight overlay, inset from the edges so its sharp
+        /// rectangular corners stay comfortably inside the parent's rounded
+        /// silhouette. See Art.TopGloss for why this beats baking gloss into
+        /// a 9-sliced base sprite.
+        /// </summary>
+        public static void AddGloss(Transform parent, float lowerY = 0.42f, float upperY = 0.92f, float insetFrac = 0.05f)
+        {
+            var go = new GameObject("Gloss", typeof(RectTransform), typeof(RawImage));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<RawImage>();
+            img.texture = Art.TopGloss();
+            img.raycastTarget = false;
+            var rt = img.rectTransform;
+            rt.anchorMin = new Vector2(insetFrac, lowerY);
+            rt.anchorMax = new Vector2(1f - insetFrac, upperY);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
         }
 
         /// <summary>Stretch a RectTransform to fill its parent.</summary>

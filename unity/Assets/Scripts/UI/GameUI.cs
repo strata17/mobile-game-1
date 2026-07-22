@@ -135,6 +135,7 @@ namespace Reveal.UI
             _progressFill.rectTransform.anchorMax = new Vector2(0, 1);
             _progressFill.rectTransform.pivot = new Vector2(0, 0.5f);
             _progressFill.rectTransform.sizeDelta = new Vector2(0, 0);
+            UIFactory.AddGloss(_progressFill.transform, 0.3f, 1f, 0.08f);
             _progressPct = UIFactory.Label(prow, "Pct", "0%", 26, _text);
             UIFactory.Stretch(_progressPct.rectTransform);
 
@@ -425,6 +426,7 @@ namespace Reveal.UI
             _journeyFill.rectTransform.pivot = new Vector2(0, 0.5f);
             _journeyFill.rectTransform.offsetMin = Vector2.zero;
             _journeyFill.rectTransform.offsetMax = Vector2.zero;
+            UIFactory.AddGloss(_journeyFill.transform, 0.3f, 1f, 0.08f);
 
             var play = UIFactory.Button(card, "Play", "PLAY", _primary, Color.white, 46);
             ((RectTransform)play.transform).sizeDelta = new Vector2(0, 130);

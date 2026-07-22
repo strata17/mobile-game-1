@@ -82,6 +82,37 @@ namespace Reveal.UI
             return sprite;
         }
 
+        static Texture2D _topGloss;
+
+        /// <summary>
+        /// A soft white top-highlight gradient (opaque-ish at top, fully
+        /// transparent by mid-height). Used as a small Simple-stretched
+        /// overlay on buttons/bars instead of baking gloss into a 9-sliced
+        /// base sprite -- 9-slicing only preserves a gradient within the
+        /// border strip, so on a tall element (e.g. a full-height button)
+        /// the stretched middle collapses to one flat colour and the shine
+        /// all but disappears. A plain stretched gradient has no such
+        /// limitation: it scales cleanly to any target size.
+        /// </summary>
+        public static Texture2D TopGloss()
+        {
+            if (_topGloss != null) return _topGloss;
+            int h = 64;
+            var tex = new Texture2D(2, h, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            for (int y = 0; y < h; y++)
+            {
+                float t = (float)y / (h - 1); // 0 bottom, 1 top
+                float a = Mathf.Pow(Mathf.SmoothStep(0f, 1f, t), 1.3f) * 0.32f;
+                var c = new Color(1f, 1f, 1f, a);
+                tex.SetPixel(0, y, c);
+                tex.SetPixel(1, y, c);
+            }
+            tex.Apply();
+            _topGloss = tex;
+            return tex;
+        }
+
         /// <summary>
         /// A subtle grid-line texture: thin translucent lines every cellPx,
         /// forming (cells x cells) squares. Used so every board cell keeps a
