@@ -106,6 +106,19 @@ namespace Reveal.Game
 
         public int Adjacent(int r, int c) => Adj[r, c];
 
+        /// <summary>Live bomb count (0 after DefuseAllBombs).</summary>
+        public int BombCount
+        {
+            get
+            {
+                int n = 0;
+                for (int r = 0; r < Size; r++)
+                    for (int c = 0; c < Size; c++)
+                        if (Bomb[r, c]) n++;
+                return n;
+            }
+        }
+
         public RevealResult Reveal(int r, int c)
         {
             if (r < 0 || c < 0 || r >= Size || c >= Size) return RevealResult.Nothing;

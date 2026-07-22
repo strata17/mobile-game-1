@@ -93,7 +93,8 @@ namespace Reveal.Game
             else _picture.uvRect = new Rect(0f, 0f, 1f, 1f);
             _cell = sizePx / board.Size;
 
-            _gridOverlay.texture = Art.GridTexture(board.Size, 64, new Color(1f, 1f, 1f, 0.16f));
+            _gridOverlay.texture = Art.GridTexture(board.Size, 64, new Color(1f, 1f, 1f, 0.09f));
+            _gridOverlay.enabled = true; // may have been hidden by CelebrateReveal
 
             if (_covers != null)
                 foreach (var c in _covers) if (c) Destroy(c.gameObject);
@@ -130,7 +131,10 @@ namespace Reveal.Game
             rim.sprite = Art.RoundedRect(20, false);
             rim.type = Image.Type.Sliced;
             rim.raycastTarget = false;
-            rim.color = scene.BgTop;
+            // Darker scene variant for the rim: BgTop matches the artwork's
+            // own hue too closely (invisible rim on same-coloured levels);
+            // the darker BgBottom stays on-palette but keeps contrast.
+            rim.color = Color.Lerp(scene.BgBottom, Color.black, 0.15f);
 
             float gap = Mathf.Max(4f, _cell * 0.10f);
             var rt = rim.rectTransform;
@@ -194,6 +198,8 @@ namespace Reveal.Game
             var textOutline = t.gameObject.AddComponent<Outline>();
             textOutline.effectColor = new Color(0f, 0f, 0f, 0.4f);
             textOutline.effectDistance = new Vector2(1f, -1f);
+
+            go.AddComponent<Reveal.UI.Appear>(); // bounce in
         }
 
         /// <summary>
@@ -265,6 +271,30 @@ namespace Reveal.Game
             srt.pivot = new Vector2(0.5f, 0.5f);
             srt.anchoredPosition = new Vector2(_cell * 0.30f, -_cell * 0.05f);
             srt.sizeDelta = new Vector2(_cell * 0.18f, _cell * 0.18f);
+
+            go.AddComponent<Reveal.UI.Appear>(); // bounce in
+        }
+
+        /// <summary>
+        /// Win payoff: pop away every remaining cover and clear the clue
+        /// discs and grid so the finished artwork shows clean for a beat —
+        /// the whole point of the game is revealing the picture, so the
+        /// player should actually get to see it before the results card.
+        /// </summary>
+        public void CelebrateReveal()
+        {
+            if (_covers == null) return;
+            for (int r = 0; r < _board.Size; r++)
+                for (int c = 0; c < _board.Size; c++)
+                    if (_covers[r, c] != null)
+                    {
+                        _covers[r, c].raycastTarget = false;
+                        _covers[r, c].gameObject.AddComponent<Reveal.UI.Vanish>();
+                        _covers[r, c] = null;
+                    }
+            foreach (Transform t in _clueLayer) Destroy(t.gameObject);
+            foreach (Transform t in _bombLayer) Destroy(t.gameObject);
+            _gridOverlay.enabled = false;
         }
 
         /// <summary>Show every bomb (used on game over so the player sees the truth).</summary>

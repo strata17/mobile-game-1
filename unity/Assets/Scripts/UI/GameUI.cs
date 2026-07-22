@@ -30,7 +30,7 @@ namespace Reveal.UI
         RectTransform _starRow, _chestBadge;
         Image[] _starImages;
         Text _goScore, _nearMiss;
-        Text _chapterLabel, _streakLabel, _collectionCount, _menuCoins;
+        Text _chapterLabel, _streakLabel, _collectionCount, _menuCoins, _bombInfo;
         RectTransform _streakRow;
         Image _journeyFill;
         Button _dailyBtn;
@@ -134,6 +134,13 @@ namespace Reveal.UI
             _progressPct = UIFactory.Label(prow, "Pct", "0%", 26, _text);
             UIFactory.Stretch(_progressPct.rectTransform);
 
+            _bombInfo = UIFactory.Label(_chrome, "BombInfo", "", 24, _muted);
+            _bombInfo.rectTransform.anchorMin = new Vector2(0.5f, 1);
+            _bombInfo.rectTransform.anchorMax = new Vector2(0.5f, 1);
+            _bombInfo.rectTransform.pivot = new Vector2(0.5f, 1);
+            _bombInfo.rectTransform.sizeDelta = new Vector2(500, 32);
+            _bombInfo.rectTransform.anchoredPosition = new Vector2(0, -388);
+
             _heartsRow = UIFactory.Container(_chrome, "Hearts");
             _heartsRow.anchorMin = new Vector2(0.5f, 1); _heartsRow.anchorMax = new Vector2(0.5f, 1);
             _heartsRow.pivot = new Vector2(0.5f, 1);
@@ -198,7 +205,7 @@ namespace Reveal.UI
         }
 
         // ---------------- overlays ----------------
-        RectTransform Overlay(string name, out RectTransform card, bool opaque = false)
+        RectTransform Overlay(string name, out RectTransform card, bool opaque = false, float scrimAlpha = 0.88f)
         {
             RectTransform ov;
             if (opaque)
@@ -217,7 +224,7 @@ namespace Reveal.UI
                 // against gameplay behind it. A translucent tint alone
                 // blends with a warm/bright background into a muddy brown
                 // wash rather than a clean darkened backdrop.
-                ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, 0.88f));
+                ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, scrimAlpha));
             }
             UIFactory.Stretch(ov);
 
@@ -228,6 +235,11 @@ namespace Reveal.UI
             var cardShadow = card.gameObject.AddComponent<Shadow>();
             cardShadow.effectColor = new Color(0f, 0f, 0f, 0.4f);
             cardShadow.effectDistance = new Vector2(0, -10);
+            // Hairline light edge so the card reads as a lifted surface
+            // rather than a flat dark cutout.
+            var cardEdge = card.gameObject.AddComponent<Outline>();
+            cardEdge.effectColor = new Color(1f, 1f, 1f, 0.07f);
+            cardEdge.effectDistance = new Vector2(1.5f, 1.5f);
 
             var vg = card.gameObject.AddComponent<VerticalLayoutGroup>();
             vg.childAlignment = TextAnchor.UpperCenter;
@@ -415,7 +427,9 @@ namespace Reveal.UI
 
         void BuildLevelComplete()
         {
-            _levelComplete = Overlay("LevelComplete", out var card);
+            // Light scrim: the freshly-revealed picture behind this card is
+            // the level's payoff, so keep it visible rather than blacked out.
+            _levelComplete = Overlay("LevelComplete", out var card, scrimAlpha: 0.45f);
             _levelComplete.gameObject.SetActive(false);
             if (GameArt.Chest != null)
             {
@@ -575,6 +589,13 @@ namespace Reveal.UI
                     h.rectTransform.sizeDelta = new Vector2(44, 44);
                 }
             }
+        }
+
+        public void SetBombInfo(int bombs)
+        {
+            _bombInfo.text = bombs <= 0 ? "no bombs left — scratch freely!"
+                : bombs == 1 ? "1 bomb hidden"
+                : $"{bombs} bombs hidden";
         }
 
         public void SetHintButton(int coins)

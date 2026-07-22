@@ -66,6 +66,7 @@ namespace Reveal.Game
                 _ui.HideGameOver();
                 _ui.ShowInGame(false);
                 RefreshMenu();
+                _ui.ShowMenu(true);
             };
         }
 
@@ -93,6 +94,7 @@ namespace Reveal.Game
             _ui.ShowInGame(true);
             _ui.SetHud(_coins, _level, _score, _best);
             _ui.SetHearts(_hearts);
+            _ui.SetBombInfo(_board.BombCount);
             _ui.SetHintButton(_coins);
             _ui.ShowTutorial(!SaveSystem.TutorialDone);
             UpdateProgress();
@@ -206,7 +208,18 @@ namespace Reveal.Game
 
             _ui.ShowInGame(false);
             _ui.SetHud(_coins, _level, _score, _best);
-            _ui.ShowLevelComplete(_level - 1, points, coins, unlock, stars, isChest);
+
+            // Payoff beat: pop the remaining covers and let the finished
+            // picture show clean for a moment before the results card.
+            _view.CelebrateReveal();
+            StartCoroutine(ShowLevelCompleteAfterBeat(_level - 1, points, coins, unlock, stars, isChest));
+        }
+
+        System.Collections.IEnumerator ShowLevelCompleteAfterBeat(
+            int level, int points, int coins, string unlock, int stars, bool isChest)
+        {
+            yield return new WaitForSecondsRealtime(1.1f);
+            _ui.ShowLevelComplete(level, points, coins, unlock, stars, isChest);
             RefreshMenu();
         }
 
@@ -241,6 +254,7 @@ namespace Reveal.Game
                 _ui.HideGameOver();
                 _ui.ShowInGame(true);
                 _ui.SetHearts(_hearts);
+                _ui.SetBombInfo(0); // all defused — advertise the free-scratch reward
                 UpdateProgress();
             });
         }
@@ -300,13 +314,17 @@ namespace Reveal.Game
             RefreshMenu();
         }
 
+        // Rebuilds menu content only — deliberately does NOT activate the
+        // menu screen. It used to call ShowMenu(true), which silently
+        // re-opened the opaque menu behind the level-complete card on every
+        // win, hiding the just-revealed picture. Callers that actually want
+        // the menu visible show it explicitly.
         void RefreshMenu()
         {
             _ui.SetMenuMeta(SaveSystem.Streak, _level, SaveSystem.Collection);
             bool dailyAvailable = SaveSystem.LastDailyDay != SaveSystem.Today;
             _ui.SetDailyButton(dailyAvailable, GameConfig.DailyAmount(SaveSystem.Streak + 1));
             _ui.SetMissions(Missions.Active);
-            _ui.ShowMenu(true);
         }
 
         void AddCoins(int delta)
