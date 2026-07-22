@@ -22,6 +22,7 @@ namespace Reveal.Game
         RawImage _picture;
         RawImage _gridOverlay;
         RectTransform _clueLayer;
+        RectTransform _bombLayer;
         Image[,] _covers;
         float _cell;
 
@@ -60,6 +61,13 @@ namespace Reveal.Game
             _clueLayer = UIFactory.Container(_rt, "Clues");
             UIFactory.Stretch(_clueLayer);
 
+            // Bomb marks (drawn on hit / game-over reveal) get their own
+            // layer so Load() can clear them between levels -- otherwise a
+            // Continue (which reloads the board after defusing) would leave
+            // stale bomb graphics behind from the previous attempt.
+            _bombLayer = UIFactory.Container(_rt, "Bombs");
+            UIFactory.Stretch(_bombLayer);
+
             // Transparent raycast catcher for drag input across the whole board.
             var input = new GameObject("Input", typeof(RectTransform), typeof(Image));
             input.transform.SetParent(_rt, false);
@@ -91,6 +99,7 @@ namespace Reveal.Game
                 foreach (var c in _covers) if (c) Destroy(c.gameObject);
 
             foreach (Transform t in _clueLayer) Destroy(t.gameObject);
+            foreach (Transform t in _bombLayer) Destroy(t.gameObject);
 
             _covers = new Image[board.Size, board.Size];
             var scene = Scenes.ForLevel(board.Level);
@@ -187,6 +196,77 @@ namespace Reveal.Game
             textOutline.effectDistance = new Vector2(1f, -1f);
         }
 
+        /// <summary>
+        /// Draws a bomb tile with an actual bomb glyph (dark round body, lit
+        /// fuse, spark) — used both the instant a bomb is hit and for every
+        /// remaining bomb revealed at game over, so a "revealed bomb" always
+        /// shows what it was rather than an empty coloured square.
+        /// </summary>
+        public void ShowBombMark(int r, int c)
+        {
+            var go = new GameObject($"bomb{r}_{c}", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(_bombLayer, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(20, true);
+            img.type = Image.Type.Sliced;
+            img.raycastTarget = false;
+            img.color = new Color(1f, 0.30f, 0.38f, 0.95f);
+            var rt = img.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            float gap = Mathf.Max(4f, _cell * 0.10f);
+            rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
+            rt.anchoredPosition = CellCenter(r, c);
+
+            // Bomb body
+            var bodyGo = new GameObject("body", typeof(RectTransform), typeof(Image));
+            bodyGo.transform.SetParent(go.transform, false);
+            var body = bodyGo.GetComponent<Image>();
+            body.sprite = Art.RoundedRect(60, false);
+            body.type = Image.Type.Sliced;
+            body.raycastTarget = false;
+            body.color = UIFactory.Hex("#20222f");
+            UIFactory.Stretch(body.rectTransform, _cell * 0.16f);
+
+            // Gloss highlight
+            var glossGo = new GameObject("gloss", typeof(RectTransform), typeof(Image));
+            glossGo.transform.SetParent(bodyGo.transform, false);
+            var gloss = glossGo.GetComponent<Image>();
+            gloss.sprite = Art.RoundedRect(60, false);
+            gloss.type = Image.Type.Sliced;
+            gloss.raycastTarget = false;
+            gloss.color = new Color(1f, 1f, 1f, 0.35f);
+            var grt = gloss.rectTransform;
+            grt.anchorMin = new Vector2(0.18f, 0.55f); grt.anchorMax = new Vector2(0.45f, 0.8f);
+            grt.offsetMin = grt.offsetMax = Vector2.zero;
+
+            // Fuse (thin bar angled up-right from the body)
+            var fuseGo = new GameObject("fuse", typeof(RectTransform), typeof(Image));
+            fuseGo.transform.SetParent(go.transform, false);
+            var fuse = fuseGo.GetComponent<Image>();
+            fuse.color = UIFactory.Hex("#7a5a3a");
+            fuse.raycastTarget = false;
+            var frt = fuse.rectTransform;
+            frt.anchorMin = frt.anchorMax = new Vector2(0.68f, 0.78f);
+            frt.pivot = new Vector2(0f, 0f);
+            frt.sizeDelta = new Vector2(_cell * 0.32f, _cell * 0.07f);
+            frt.localRotation = Quaternion.Euler(0, 0, 40f);
+
+            // Spark at the fuse tip
+            var sparkGo = new GameObject("spark", typeof(RectTransform), typeof(Image));
+            sparkGo.transform.SetParent(go.transform, false);
+            var spark = sparkGo.GetComponent<Image>();
+            spark.sprite = Art.RoundedRect(30, true);
+            spark.type = Image.Type.Sliced;
+            spark.raycastTarget = false;
+            spark.color = UIFactory.Hex("#ffcb47");
+            var srt = spark.rectTransform;
+            srt.anchorMin = srt.anchorMax = new Vector2(0.5f, 1f);
+            srt.pivot = new Vector2(0.5f, 0.5f);
+            srt.anchoredPosition = new Vector2(_cell * 0.30f, -_cell * 0.05f);
+            srt.sizeDelta = new Vector2(_cell * 0.18f, _cell * 0.18f);
+        }
+
         /// <summary>Show every bomb (used on game over so the player sees the truth).</summary>
         public void RevealBombs()
         {
@@ -195,19 +275,14 @@ namespace Reveal.Game
                 for (int c = 0; c < _board.Size; c++)
                     if (_board.Bomb[r, c])
                     {
-                        var go = new GameObject($"bomb{r}_{c}", typeof(RectTransform), typeof(Image));
-                        go.transform.SetParent(_rt, false);
-                        var img = go.GetComponent<Image>();
-                        img.sprite = Art.RoundedRect(20, true);
-                        img.type = Image.Type.Sliced;
-                        img.raycastTarget = false;
-                        img.color = new Color(1f, 0.30f, 0.38f, 0.95f);
-                        var rt = img.rectTransform;
-                        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
-                        rt.pivot = new Vector2(0.5f, 0.5f);
-                        float gap = Mathf.Max(4f, _cell * 0.10f);
-                        rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
-                        rt.anchoredPosition = CellCenter(r, c);
+                        // Still-covered bombs need their cover cleared first,
+                        // otherwise the mark would be drawn underneath it.
+                        if (_covers[r, c] != null)
+                        {
+                            Destroy(_covers[r, c].gameObject);
+                            _covers[r, c] = null;
+                        }
+                        ShowBombMark(r, c);
                     }
         }
 

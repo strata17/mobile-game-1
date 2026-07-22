@@ -136,6 +136,7 @@ namespace Reveal.Game
                     break;
                 case RevealResult.Bomb:
                     _view.RevealTile(r, c);
+                    _view.ShowBombMark(r, c);
                     _hearts--;
                     _ui.SetHearts(_hearts);
                     Sfx.Instance.Bomb();
