@@ -106,7 +106,20 @@ namespace Reveal.Game
                 SaveSystem.TutorialDone = true;
                 _ui.ShowTutorial(false);
             }
+            bool wasBonus = _board.Bonus[r, c]; // read before Reveal() (state doesn't change, safe either way)
             var result = _board.Reveal(r, c);
+
+            // A bonus tile always pays out, even on the move that also wins
+            // the level (Board.Reveal returns Win, not Bonus, in that case —
+            // otherwise the coin reward would silently be dropped).
+            if (wasBonus && (result == RevealResult.Bonus || result == RevealResult.Win))
+            {
+                AddCoins(GameConfig.BonusCoin);
+                Missions.Progress(MissionType.FindBonus, 1);
+                Missions.Progress(MissionType.EarnCoins, GameConfig.BonusCoin);
+                Sfx.Instance.Bonus();
+            }
+
             switch (result)
             {
                 case RevealResult.Nothing:
@@ -120,10 +133,6 @@ namespace Reveal.Game
                 case RevealResult.Bonus:
                     _view.RevealTile(r, c);
                     _view.ShowClue(r, c, _board.Adjacent(r, c));
-                    AddCoins(GameConfig.BonusCoin);
-                    Missions.Progress(MissionType.FindBonus, 1);
-                    Missions.Progress(MissionType.EarnCoins, GameConfig.BonusCoin);
-                    Sfx.Instance.Bonus();
                     break;
                 case RevealResult.Bomb:
                     _view.RevealTile(r, c);

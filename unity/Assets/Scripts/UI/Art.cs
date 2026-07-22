@@ -80,6 +80,37 @@ namespace Reveal.UI
             return sprite;
         }
 
+        /// <summary>
+        /// A subtle grid-line texture: thin translucent lines every cellPx,
+        /// forming (cells x cells) squares. Used so every board cell keeps a
+        /// visible boundary even after its cover is revealed — without this,
+        /// revealed cells blend seamlessly into the picture and any clue
+        /// number on them looks like it's floating with no "home" cell.
+        /// </summary>
+        public static Texture2D GridTexture(int cells, int cellPx, Color lineColor, int thickness = 2)
+        {
+            int size = cells * cellPx;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            var px = new Color32[size * size];
+            Color32 clear = new Color32(0, 0, 0, 0);
+            Color32 line = lineColor;
+            for (int y = 0; y < size; y++)
+            {
+                int ym = y % cellPx;
+                for (int x = 0; x < size; x++)
+                {
+                    int xm = x % cellPx;
+                    bool onLine = xm < thickness || ym < thickness;
+                    px[y * size + x] = onLine ? line : clear;
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            return tex;
+        }
+
         /// <summary>A full-screen vertical gradient texture (top → bottom).</summary>
         public static Texture2D Gradient(Color top, Color bottom, int h = 256)
         {

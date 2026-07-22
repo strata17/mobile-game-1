@@ -20,6 +20,7 @@ namespace Reveal.Game
         Board _board;
         RectTransform _rt;
         RawImage _picture;
+        RawImage _gridOverlay;
         RectTransform _clueLayer;
         Image[,] _covers;
         float _cell;
@@ -45,7 +46,17 @@ namespace Reveal.Game
             UIFactory.Stretch(_picture.rectTransform);
             _picture.raycastTarget = false;
 
-            // Clue layer sits above the picture, below the covers.
+            // Persistent per-cell grid lines, above the picture. Keeps every
+            // cell's boundary visible even after its cover is revealed, so a
+            // clue number always sits inside a clearly-bounded tile instead
+            // of looking like it's floating over the artwork.
+            var gridGo = new GameObject("Grid", typeof(RectTransform), typeof(RawImage));
+            gridGo.transform.SetParent(_rt, false);
+            _gridOverlay = gridGo.GetComponent<RawImage>();
+            _gridOverlay.raycastTarget = false;
+            UIFactory.Stretch(_gridOverlay.rectTransform);
+
+            // Clue layer sits above the grid, below the covers.
             _clueLayer = UIFactory.Container(_rt, "Clues");
             UIFactory.Stretch(_clueLayer);
 
@@ -74,6 +85,8 @@ namespace Reveal.Game
             else _picture.uvRect = new Rect(0f, 0f, 1f, 1f);
             _cell = sizePx / board.Size;
 
+            _gridOverlay.texture = Art.GridTexture(board.Size, 64, new Color(1f, 1f, 1f, 0.16f));
+
             if (_covers != null)
                 foreach (var c in _covers) if (c) Destroy(c.gameObject);
 
@@ -98,21 +111,35 @@ namespace Reveal.Game
         {
             // Bombs are hidden now — every cover is an identical glossy gem, so
             // danger is deduced from the revealed clues, not seen on the cover.
+            // The gem itself is a neutral pearl (not scene-tinted): a fill that
+            // matches the hidden picture's own hue tends to blend into it
+            // (e.g. pink gems over a pink heart), killing contrast. A thin
+            // scene-coloured rim still gives each level its own accent colour.
             var go = new GameObject($"C{r}_{c}", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(_rt, false);
-            var img = go.GetComponent<Image>();
-            img.sprite = Art.RoundedRect(20, true);  // rounded + glossy gem
-            img.type = Image.Type.Sliced;
-            img.raycastTarget = false;
-            img.color = Color.Lerp(scene.BgTop, Color.white, 0.28f);
+            var rim = go.GetComponent<Image>();
+            rim.sprite = Art.RoundedRect(20, false);
+            rim.type = Image.Type.Sliced;
+            rim.raycastTarget = false;
+            rim.color = scene.BgTop;
 
             float gap = Mathf.Max(4f, _cell * 0.10f);
-            var rt = img.rectTransform;
+            var rt = rim.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); // top-left origin
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
             rt.anchoredPosition = CellCenter(r, c);
-            return img;
+
+            var faceGo = new GameObject("face", typeof(RectTransform), typeof(Image));
+            faceGo.transform.SetParent(go.transform, false);
+            var face = faceGo.GetComponent<Image>();
+            face.sprite = Art.RoundedRect(20, true);
+            face.type = Image.Type.Sliced;
+            face.raycastTarget = false;
+            face.color = new Color(0.96f, 0.95f, 0.98f, 1f); // neutral pearl
+            UIFactory.Stretch(face.rectTransform, _cell * 0.07f);
+
+            return rim;
         }
 
         static readonly Color[] DangerColors =
@@ -139,17 +166,25 @@ namespace Reveal.Game
             disc.sprite = Art.RoundedRect(40, true);
             disc.type = Image.Type.Sliced;
             disc.raycastTarget = false;
-            disc.color = new Color(dc.r, dc.g, dc.b, 0.92f);
+            disc.color = new Color(dc.r, dc.g, dc.b, 1f);
             var rt = disc.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(_cell * 0.5f, _cell * 0.5f);
+            rt.sizeDelta = new Vector2(_cell * 0.58f, _cell * 0.58f);
             rt.anchoredPosition = CellCenter(r, c);
+
+            // Dark rim so the badge pops against any picture behind it.
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
 
             Color txt = count == 1 ? new Color(0.35f, 0.24f, 0.05f) : Color.white;
             var t = UIFactory.Label(go.transform, "n", count.ToString(),
-                Mathf.RoundToInt(_cell * 0.34f), txt, TextAnchor.MiddleCenter, FontStyle.Bold);
+                Mathf.RoundToInt(_cell * 0.36f), txt, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIFactory.Stretch(t.rectTransform);
+            var textOutline = t.gameObject.AddComponent<Outline>();
+            textOutline.effectColor = new Color(0f, 0f, 0f, 0.4f);
+            textOutline.effectDistance = new Vector2(1f, -1f);
         }
 
         /// <summary>Show every bomb (used on game over so the player sees the truth).</summary>
