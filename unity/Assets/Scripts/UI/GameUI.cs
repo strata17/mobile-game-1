@@ -102,7 +102,7 @@ namespace Reveal.UI
             // icons keep contrast regardless of the busy sky artwork behind
             // them -- without this, light-grey labels directly over a warm,
             // bright background become nearly unreadable.
-            var hudBg = UIFactory.RoundedPanel(_chrome, "HudBg", new Color(_cardBg.r, _cardBg.g, _cardBg.b, 0.55f), 36).rectTransform;
+            var hudBg = UIFactory.RoundedPanel(_chrome, "HudBg", new Color(_cardBg.r, _cardBg.g, _cardBg.b, 0.85f), 36).rectTransform;
             hudBg.anchorMin = new Vector2(0, 1); hudBg.anchorMax = new Vector2(1, 1);
             hudBg.pivot = new Vector2(0.5f, 1);
             hudBg.sizeDelta = new Vector2(-60, 300);
@@ -213,7 +213,11 @@ namespace Reveal.UI
             }
             else
             {
-                ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, 0.62f));
+                // A high-alpha near-black scrim so the modal reads cleanly
+                // against gameplay behind it. A translucent tint alone
+                // blends with a warm/bright background into a muddy brown
+                // wash rather than a clean darkened backdrop.
+                ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, 0.88f));
             }
             UIFactory.Stretch(ov);
 
@@ -252,6 +256,43 @@ namespace Reveal.UI
             rt.anchoredPosition = offset;
             rt.sizeDelta = new Vector2(size, size);
             return img;
+        }
+
+        /// <summary>
+        /// A round danger badge with an illustrated bomb glyph (dark body,
+        /// gloss, lit fuse + spark) — used on the game-over screen instead
+        /// of a plain "!" character, matching the bomb marks on the board.
+        /// </summary>
+        void BuildBombBadge(Transform parent, float size)
+        {
+            var wrap = UIFactory.Container(parent, "BombBadge");
+            wrap.sizeDelta = new Vector2(0, size + 20);
+
+            var back = UIFactory.RoundedPanel(wrap, "back", UIFactory.Hex("#ff5f7e"), Mathf.RoundToInt(size * 0.5f), true).rectTransform;
+            back.anchorMin = back.anchorMax = new Vector2(0.5f, 0.5f);
+            back.sizeDelta = new Vector2(size, size);
+
+            var body = UIFactory.RoundedPanel(back, "body", UIFactory.Hex("#20222f"), 60).rectTransform;
+            UIFactory.Stretch(body, size * 0.16f);
+
+            var gloss = UIFactory.RoundedPanel(body, "gloss", new Color(1f, 1f, 1f, 0.35f), 60).rectTransform;
+            gloss.anchorMin = new Vector2(0.18f, 0.55f); gloss.anchorMax = new Vector2(0.45f, 0.8f);
+            gloss.offsetMin = gloss.offsetMax = Vector2.zero;
+
+            var fuse = new GameObject("fuse", typeof(RectTransform), typeof(Image));
+            fuse.transform.SetParent(back, false);
+            fuse.GetComponent<Image>().color = UIFactory.Hex("#7a5a3a");
+            var frt = fuse.GetComponent<RectTransform>();
+            frt.anchorMin = frt.anchorMax = new Vector2(0.68f, 0.78f);
+            frt.pivot = new Vector2(0f, 0f);
+            frt.sizeDelta = new Vector2(size * 0.32f, size * 0.07f);
+            frt.localRotation = Quaternion.Euler(0, 0, 40f);
+
+            var spark = UIFactory.RoundedPanel(back, "spark", UIFactory.Hex("#ffcb47"), 30, true).rectTransform;
+            spark.anchorMin = spark.anchorMax = new Vector2(0.5f, 1f);
+            spark.pivot = new Vector2(0.5f, 0.5f);
+            spark.anchoredPosition = new Vector2(size * 0.30f, -size * 0.05f);
+            spark.sizeDelta = new Vector2(size * 0.18f, size * 0.18f);
         }
 
         /// <summary>An aspect-preserving image row (fixed height, full width).</summary>
@@ -454,7 +495,7 @@ namespace Reveal.UI
         {
             _gameOver = Overlay("GameOver", out var card);
             _gameOver.gameObject.SetActive(false);
-            UIFactory.Label(card, "Boom", "!", 110, UIFactory.Hex("#ff5f7e"), TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform.sizeDelta = new Vector2(0, 120);
+            BuildBombBadge(card, 150);
             UIFactory.Label(card, "Title", "Out of lives!", 60, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
                 .rectTransform.sizeDelta = new Vector2(0, 90);
             _nearMiss = UIFactory.Label(card, "Near", "", 34, _accent);
@@ -620,11 +661,29 @@ namespace Reveal.UI
             {
                 var row = UIFactory.RoundedPanel(_missionsList, "m", UIFactory.Hex("#0c0e18"), 20).rectTransform;
                 row.sizeDelta = new Vector2(0, 64);
-                var label = UIFactory.Label(row, "t", $"{m.Text}", 28, m.Complete ? UIFactory.Hex("#7fe0a0") : _text, TextAnchor.MiddleLeft);
-                label.rectTransform.anchorMin = new Vector2(0, 0); label.rectTransform.anchorMax = new Vector2(0.7f, 1);
-                label.rectTransform.offsetMin = new Vector2(24, 0); label.rectTransform.offsetMax = Vector2.zero;
+
+                Texture2D icon = m.Type == MissionType.ClearLevels ? GameArt.Chest : GameArt.Coin;
+                float labelStart = 24;
+                if (icon != null)
+                {
+                    var ig = new GameObject("icon", typeof(RectTransform), typeof(Image));
+                    ig.transform.SetParent(row, false);
+                    var iimg = ig.GetComponent<Image>();
+                    iimg.sprite = GameArt.SpriteFrom(icon);
+                    iimg.preserveAspect = true;
+                    var irt = ig.GetComponent<RectTransform>();
+                    irt.anchorMin = irt.anchorMax = new Vector2(0, 0.5f);
+                    irt.pivot = new Vector2(0, 0.5f);
+                    irt.anchoredPosition = new Vector2(14, 0);
+                    irt.sizeDelta = new Vector2(38, 38);
+                    labelStart = 62;
+                }
+
+                var label = UIFactory.Label(row, "t", $"{m.Text}", 26, m.Complete ? UIFactory.Hex("#7fe0a0") : _text, TextAnchor.MiddleLeft);
+                label.rectTransform.anchorMin = new Vector2(0, 0); label.rectTransform.anchorMax = new Vector2(0.68f, 1);
+                label.rectTransform.offsetMin = new Vector2(labelStart, 0); label.rectTransform.offsetMax = Vector2.zero;
                 var prog = UIFactory.Label(row, "p", $"{m.Progress}/{m.Goal}", 26, _muted, TextAnchor.MiddleRight);
-                prog.rectTransform.anchorMin = new Vector2(0.7f, 0); prog.rectTransform.anchorMax = new Vector2(1, 1);
+                prog.rectTransform.anchorMin = new Vector2(0.68f, 0); prog.rectTransform.anchorMax = new Vector2(1, 1);
                 prog.rectTransform.offsetMin = Vector2.zero; prog.rectTransform.offsetMax = new Vector2(-24, 0);
             }
         }
