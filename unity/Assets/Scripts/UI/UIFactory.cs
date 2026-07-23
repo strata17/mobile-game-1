@@ -50,7 +50,11 @@ namespace Reveal.UI
             go.transform.SetParent(parent, false);
             var t = go.GetComponent<Text>();
             t.text = text;
-            t.font = DefaultFont;
+            // Use the lighter Medium weight for non-bold labels so Unity's
+            // synthetic emboldening never has to stack on top of an
+            // already-700-weight face (which would look overly heavy) --
+            // only applies when both weights are actually available.
+            t.font = style == FontStyle.Normal && MediumFont != null ? MediumFont : DefaultFont;
             t.fontSize = size;
             t.color = color;
             t.alignment = anchor;
@@ -156,12 +160,32 @@ namespace Reveal.UI
             {
                 if (_font == null)
                 {
-                    // LegacyRuntime.ttf is the built-in font on modern Unity;
-                    // fall back to Arial on older versions.
-                    _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                    // Baloo 2 (SIL Open Font License) -- a rounded, playful
+                    // display face that matches the glossy candy/kawaii
+                    // aesthetic. Every other UI text was using Unity's plain
+                    // system font, which clashed with the illustrated art.
+                    // Falls back to the system font if the asset is ever
+                    // missing, so the project always compiles and runs.
+                    _font = Resources.Load<Font>("Fonts/Baloo2-Bold");
+                    if (_font == null) _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                     if (_font == null) _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
                 }
                 return _font;
+            }
+        }
+
+        static Font _mediumFont;
+        static bool _mediumLoaded;
+        public static Font MediumFont
+        {
+            get
+            {
+                if (!_mediumLoaded)
+                {
+                    _mediumLoaded = true;
+                    _mediumFont = Resources.Load<Font>("Fonts/Baloo2-Medium");
+                }
+                return _mediumFont;
             }
         }
 
