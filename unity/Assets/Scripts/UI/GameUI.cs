@@ -266,7 +266,7 @@ namespace Reveal.UI
             }
             UIFactory.Stretch(ov);
 
-            card = UIFactory.RoundedPanel(ov, "Card", _cardBg, 44).rectTransform;
+            card = UIFactory.RoundedPanel(ov, "Card", _cardBg, Theme.RadiusCard).rectTransform;
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
             card.pivot = new Vector2(0.5f, 0.5f);
             card.sizeDelta = new Vector2(920, 0);
@@ -281,7 +281,7 @@ namespace Reveal.UI
             shadowGo.transform.SetParent(card, false);
             shadowGo.transform.SetAsFirstSibling();
             var shadowImg = shadowGo.GetComponent<Image>();
-            shadowImg.sprite = Art.SoftShadow(40, 0.32f);
+            shadowImg.sprite = Art.SoftShadow(Theme.ShadowRadiusCard, Theme.ShadowAlphaCard);
             shadowImg.type = Image.Type.Sliced;
             shadowImg.raycastTarget = false;
             var shadowRt = shadowGo.GetComponent<RectTransform>();
@@ -299,7 +299,7 @@ namespace Reveal.UI
             var clipGo = new GameObject("ClipFrame", typeof(RectTransform), typeof(Image), typeof(Mask));
             clipGo.transform.SetParent(card, false);
             var clipImg = clipGo.GetComponent<Image>();
-            clipImg.sprite = Art.RoundedRect(44, false);
+            clipImg.sprite = Art.RoundedRect(Theme.RadiusCard, false);
             clipImg.type = Image.Type.Sliced;
             clipImg.color = _cardBg;
             clipGo.GetComponent<Mask>().showMaskGraphic = true;
@@ -316,7 +316,7 @@ namespace Reveal.UI
             var edgeGo = new GameObject("Edge", typeof(RectTransform), typeof(Image));
             edgeGo.transform.SetParent(card, false);
             var edgeImg = edgeGo.GetComponent<Image>();
-            edgeImg.sprite = Art.RoundedRect(44, false);
+            edgeImg.sprite = Art.RoundedRect(Theme.RadiusCard, false);
             edgeImg.type = Image.Type.Sliced;
             edgeImg.color = new Color(0f, 0f, 0f, 0f);
             edgeImg.raycastTarget = false;
@@ -336,23 +336,14 @@ namespace Reveal.UI
             cardGrad.raycastTarget = false;
             UIFactory.Stretch(cardGrad.rectTransform);
 
-            // Ornate parchment/filigree texture layered on top of the plain
-            // gradient at reduced opacity. Full-strength this asset's bright
-            // center glow would land at an unpredictable spot behind text
-            // (the card auto-sizes to its content, so its position varies
-            // screen to screen) -- faded, it reads as a rich decorative
-            // texture without ever fighting the text on top of it.
-            var cardTex = GameArt.CardBackground;
-            if (cardTex != null)
-            {
-                var texGo = new GameObject("Texture", typeof(RectTransform), typeof(RawImage));
-                texGo.transform.SetParent(clipGo.transform, false);
-                var tex = texGo.GetComponent<RawImage>();
-                tex.texture = cardTex;
-                tex.color = new Color(1f, 1f, 1f, 0.4f);
-                tex.raycastTarget = false;
-                UIFactory.Stretch(tex.rectTransform);
-            }
+            // NOTE: deliberately NOT layering the ornate parchment texture
+            // (GameArt.CardBackground) here. It's a painterly/photoreal
+            // asset and everything else in this UI -- icons, tiles, buttons
+            // -- is flat glossy "toy" art. Layering a richly-textured
+            // painted surface behind that is exactly the "mixing flat and
+            // skeuomorphic" anti-pattern that was making every screen feel
+            // incoherent regardless of how any single element was tuned.
+            // The plain gradient above is the card surface, full stop.
 
             var vg = card.gameObject.AddComponent<VerticalLayoutGroup>();
             vg.childAlignment = TextAnchor.UpperCenter;

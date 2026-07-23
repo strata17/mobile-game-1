@@ -76,7 +76,7 @@ namespace Reveal.UI
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.sprite = Art.RoundedRect(30, true);
+            img.sprite = Art.RoundedRect(Theme.RadiusControl, true);
             img.type = Image.Type.Sliced;
             img.color = bg;
             var btn = go.GetComponent<Button>();
@@ -107,7 +107,7 @@ namespace Reveal.UI
                 clipGo.transform.SetParent(go.transform, false);
                 clipGo.transform.SetAsFirstSibling();
                 var clipImg = clipGo.GetComponent<Image>();
-                clipImg.sprite = Art.RoundedRect(30, false);
+                clipImg.sprite = Art.RoundedRect(Theme.RadiusControl, false);
                 clipImg.type = Image.Type.Sliced;
                 clipImg.color = bg;
                 clipGo.GetComponent<Mask>().showMaskGraphic = true;
