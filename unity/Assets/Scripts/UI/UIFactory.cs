@@ -106,6 +106,40 @@ namespace Reveal.UI
         }
 
         /// <summary>
+        /// A visually-subordinate "ghost" button: translucent tinted fill,
+        /// coloured outline, no drop shadow, no gloss. Every screen so far
+        /// gave secondary actions (Daily Reward, etc.) the exact same solid
+        /// gloss+shadow treatment as the primary CTA, so the two competed
+        /// for attention instead of one clearly leading -- a flagged
+        /// anti-pattern (each screen should have exactly one primary
+        /// action). Use this for anything that isn't THE thing the player
+        /// should tap first.
+        /// </summary>
+        public static Button GhostButton(Transform parent, string name, string label, Color accent, int size = 30)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(Theme.RadiusControl, false);
+            img.type = Image.Type.Sliced;
+            img.color = new Color(accent.r, accent.g, accent.b, 0.16f);
+            var btn = go.GetComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+
+            var edge = go.AddComponent<Outline>();
+            edge.effectColor = new Color(accent.r, accent.g, accent.b, 0.65f);
+            edge.effectDistance = new Vector2(2f, -2f);
+
+            var txt = Label(go.transform, "Label", label, size, accent, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var rt = txt.rectTransform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            go.AddComponent<PressPop>();
+            return btn;
+        }
+
+        /// <summary>
         /// A soft top-highlight overlay, inset from the edges so its sharp
         /// rectangular corners stay comfortably inside the parent's rounded
         /// silhouette. See Art.TopGloss for why this beats baking gloss into

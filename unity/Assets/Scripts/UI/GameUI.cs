@@ -524,8 +524,11 @@ namespace Reveal.UI
             ((RectTransform)play.transform).sizeDelta = new Vector2(0, 130);
             play.onClick.AddListener(() => OnPlay?.Invoke());
 
-            _dailyBtn = UIFactory.Button(card, "Daily", "Daily reward", _accent, Color.white, 32);
-            ((RectTransform)_dailyBtn.transform).sizeDelta = new Vector2(0, 96);
+            // Ghost style, not a second solid gloss button: PLAY is the one
+            // primary action on this screen, Daily Reward is secondary and
+            // should read that way at a glance, not compete with it.
+            _dailyBtn = UIFactory.GhostButton(card, "Daily", "Daily reward · +50 coins", _accent, 28);
+            ((RectTransform)_dailyBtn.transform).sizeDelta = new Vector2(0, 88);
             _dailyBtn.onClick.AddListener(() => OnDaily?.Invoke());
 
             UIFactory.Label(card, "MissHead", "DAILY MISSIONS", 26, _muted).rectTransform.sizeDelta = new Vector2(0, 40);
@@ -816,12 +819,17 @@ namespace Reveal.UI
                 var cell = UIFactory.RoundedPanel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#20233a"), 16, got);
                 var pic = got ? GameArt.Picture(Scenes.All[i].Motif) : null;
                 if (pic != null) { cell.sprite = GameArt.SpriteFrom(pic); cell.type = Image.Type.Simple; cell.preserveAspect = true; cell.color = Color.white; }
-                else if (!got && GameArt.Locked != null)
+                else if (!got)
                 {
-                    cell.sprite = GameArt.SpriteFrom(GameArt.Locked);
-                    cell.type = Image.Type.Simple;
-                    cell.preserveAspect = true;
-                    cell.color = Color.white;
+                    // Not GameArt.Locked here -- a detailed illustrated lock
+                    // shrunk to a 64px grid cell just turns to a muddy grey
+                    // smear (the same "fussy detail dies at small size"
+                    // problem as the old tile art). A plain flat dot reads
+                    // instantly as "locked" at thumbnail size instead.
+                    var dot = UIFactory.RoundedPanel(cell.rectTransform, "dot", new Color(1f, 1f, 1f, 0.28f), 40, false).rectTransform;
+                    dot.anchorMin = dot.anchorMax = new Vector2(0.5f, 0.5f);
+                    dot.pivot = new Vector2(0.5f, 0.5f);
+                    dot.sizeDelta = new Vector2(20, 20);
                 }
             }
         }
