@@ -307,10 +307,22 @@ namespace Reveal.UI
             UIFactory.Stretch(clipRt);
             clipGo.AddComponent<LayoutElement>().ignoreLayout = true;
 
-            // Hairline light edge on the clip frame so the card reads as a
-            // lifted surface rather than a flat cutout -- safe here since
-            // this object has no Mask of its own to conflict with.
-            var cardEdge = clipGo.AddComponent<Outline>();
+            // Hairline light edge on its OWN object, not clipGo -- putting
+            // Outline on the same GameObject as a Mask is exactly the
+            // pattern that caused the square-corner bug in the first place,
+            // just relocated. This object has an invisible fill (alpha 0)
+            // purely so Outline has geometry to duplicate; only the
+            // duplicated, offset copies show.
+            var edgeGo = new GameObject("Edge", typeof(RectTransform), typeof(Image));
+            edgeGo.transform.SetParent(card, false);
+            var edgeImg = edgeGo.GetComponent<Image>();
+            edgeImg.sprite = Art.RoundedRect(44, false);
+            edgeImg.type = Image.Type.Sliced;
+            edgeImg.color = new Color(0f, 0f, 0f, 0f);
+            edgeImg.raycastTarget = false;
+            UIFactory.Stretch(edgeGo.GetComponent<RectTransform>());
+            edgeGo.AddComponent<LayoutElement>().ignoreLayout = true;
+            var cardEdge = edgeGo.AddComponent<Outline>();
             cardEdge.effectColor = new Color(1f, 1f, 1f, 0.10f);
             cardEdge.effectDistance = new Vector2(1.5f, 1.5f);
 
