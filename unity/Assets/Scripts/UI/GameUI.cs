@@ -270,29 +270,59 @@ namespace Reveal.UI
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
             card.pivot = new Vector2(0.5f, 0.5f);
             card.sizeDelta = new Vector2(920, 0);
-            var cardShadow = card.gameObject.AddComponent<Shadow>();
-            cardShadow.effectColor = new Color(0f, 0f, 0f, 0.4f);
-            cardShadow.effectDistance = new Vector2(0, -10);
-            // Hairline light edge so the card reads as a lifted surface
-            // rather than a flat dark cutout.
-            var cardEdge = card.gameObject.AddComponent<Outline>();
-            cardEdge.effectColor = new Color(1f, 1f, 1f, 0.07f);
+
+            // A real, clearly-visible drop shadow so the card reads as a
+            // floating surface. A CHILD (not a fixed-size sibling) so it
+            // tracks the card's actual size at all times -- the card's
+            // height comes from ContentSizeFitter and isn't known yet at
+            // this point in Build(), so anything that snapshots sizeDelta
+            // here would end up the wrong size once the fitter resolves.
+            var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image));
+            shadowGo.transform.SetParent(card, false);
+            shadowGo.transform.SetAsFirstSibling();
+            var shadowImg = shadowGo.GetComponent<Image>();
+            shadowImg.sprite = Art.SoftShadow(64, 0.55f);
+            shadowImg.type = Image.Type.Sliced;
+            shadowImg.raycastTarget = false;
+            var shadowRt = shadowGo.GetComponent<RectTransform>();
+            shadowRt.anchorMin = Vector2.zero; shadowRt.anchorMax = Vector2.one;
+            shadowRt.offsetMin = new Vector2(-18, -40); shadowRt.offsetMax = new Vector2(18, 10);
+            shadowGo.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            // Clipping lives on its own child, separate from the card's own
+            // Image (which still carries the Shadow/Outline-free rounded
+            // shape as a solid-colour fallback). Combining a Mask with
+            // Shadow/Outline BaseMeshEffects on the SAME GameObject is a
+            // known source of stencil/mesh glitches in Unity UI (observed
+            // here as the card's rounded corners rendering square) --
+            // isolating the mask onto its own object avoids that entirely.
+            var clipGo = new GameObject("ClipFrame", typeof(RectTransform), typeof(Image), typeof(Mask));
+            clipGo.transform.SetParent(card, false);
+            var clipImg = clipGo.GetComponent<Image>();
+            clipImg.sprite = Art.RoundedRect(44, false);
+            clipImg.type = Image.Type.Sliced;
+            clipImg.color = _cardBg;
+            clipGo.GetComponent<Mask>().showMaskGraphic = true;
+            var clipRt = clipGo.GetComponent<RectTransform>();
+            UIFactory.Stretch(clipRt);
+            clipGo.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            // Hairline light edge on the clip frame so the card reads as a
+            // lifted surface rather than a flat cutout -- safe here since
+            // this object has no Mask of its own to conflict with.
+            var cardEdge = clipGo.AddComponent<Outline>();
+            cardEdge.effectColor = new Color(1f, 1f, 1f, 0.10f);
             cardEdge.effectDistance = new Vector2(1.5f, 1.5f);
 
             // Themed gradient fill instead of a flat near-black panel, which
             // read as a generic dark-mode dialog clashing with the vibrant
-            // coral/purple palette everywhere else. Clipped to the card's
-            // rounded shape via Mask; drawn as the first child so it covers
-            // the plain Image fill but sits behind all card content.
-            card.gameObject.AddComponent<Mask>();
+            // coral/purple palette everywhere else.
             var cardGradGo = new GameObject("Gradient", typeof(RectTransform), typeof(RawImage));
-            cardGradGo.transform.SetParent(card, false);
-            cardGradGo.transform.SetAsFirstSibling();
+            cardGradGo.transform.SetParent(clipGo.transform, false);
             var cardGrad = cardGradGo.GetComponent<RawImage>();
             cardGrad.texture = Art.Gradient(UIFactory.Hex("#463a8f"), UIFactory.Hex("#150f30"));
             cardGrad.raycastTarget = false;
             UIFactory.Stretch(cardGrad.rectTransform);
-            cardGradGo.AddComponent<LayoutElement>().ignoreLayout = true;
 
             // Ornate parchment/filigree texture layered on top of the plain
             // gradient at reduced opacity. Full-strength this asset's bright
@@ -304,14 +334,12 @@ namespace Reveal.UI
             if (cardTex != null)
             {
                 var texGo = new GameObject("Texture", typeof(RectTransform), typeof(RawImage));
-                texGo.transform.SetParent(card, false);
-                texGo.transform.SetSiblingIndex(1); // just above the gradient
+                texGo.transform.SetParent(clipGo.transform, false);
                 var tex = texGo.GetComponent<RawImage>();
                 tex.texture = cardTex;
                 tex.color = new Color(1f, 1f, 1f, 0.4f);
                 tex.raycastTarget = false;
                 UIFactory.Stretch(tex.rectTransform);
-                texGo.AddComponent<LayoutElement>().ignoreLayout = true;
             }
 
             var vg = card.gameObject.AddComponent<VerticalLayoutGroup>();

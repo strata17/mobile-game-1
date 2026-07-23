@@ -96,10 +96,25 @@ namespace Reveal.UI
             var buttonMat = GameArt.ButtonMaterial;
             if (buttonMat != null)
             {
-                go.AddComponent<Mask>().showMaskGraphic = true;
+                // Mask lives on its own child, not on `go` itself: `go`'s
+                // final size is set by the caller AFTER Button() returns
+                // (every call site does `((RectTransform)btn.transform)
+                // .sizeDelta = ...` right after), so a Mask attached here
+                // would compute its clip shape against the wrong (default)
+                // size. A child that stretches to fill always reflects the
+                // button's current, correct rect.
+                var clipGo = new GameObject("ClipFrame", typeof(RectTransform), typeof(Image), typeof(Mask));
+                clipGo.transform.SetParent(go.transform, false);
+                clipGo.transform.SetAsFirstSibling();
+                var clipImg = clipGo.GetComponent<Image>();
+                clipImg.sprite = Art.RoundedRect(30, false);
+                clipImg.type = Image.Type.Sliced;
+                clipImg.color = bg;
+                clipGo.GetComponent<Mask>().showMaskGraphic = true;
+                Stretch(clipGo.GetComponent<RectTransform>());
+
                 var matGo = new GameObject("Material", typeof(RectTransform), typeof(RawImage));
-                matGo.transform.SetParent(go.transform, false);
-                matGo.transform.SetAsFirstSibling();
+                matGo.transform.SetParent(clipGo.transform, false);
                 var mat = matGo.GetComponent<RawImage>();
                 mat.texture = buttonMat;
                 mat.color = bg;

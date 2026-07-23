@@ -53,10 +53,17 @@ namespace Reveal.UI
             return sprite;
         }
 
-        /// <summary>Soft radial drop-shadow sprite (9-sliced) for elevation.</summary>
-        public static Sprite SoftShadow(int radius = 40)
+        /// <summary>
+        /// Soft radial drop-shadow sprite (9-sliced) for elevation. maxAlpha
+        /// defaults to a subtle value suited to elements sitting on a busy
+        /// multi-hued backdrop (the board, buttons) -- a strong flat alpha
+        /// there reads as a hard dark ring rather than a soft shadow. A
+        /// floating modal card wants a visibly stronger shadow to read as
+        /// properly elevated, so callers can request a higher value.
+        /// </summary>
+        public static Sprite SoftShadow(int radius = 40, float maxAlpha = 0.22f)
         {
-            string key = $"shadow_{radius}";
+            string key = $"shadow_{radius}_{maxAlpha}";
             if (_cache.TryGetValue(key, out var s)) return s;
 
             int size = radius * 2 + 4;
@@ -67,10 +74,7 @@ namespace Reveal.UI
             for (int x = 0; x < size; x++)
             {
                 float a = CornerAlpha(x, y, size, radius);
-                // feather the edge so it reads as a blurred shadow (kept
-                // subtle -- a strong flat alpha here reads as a hard dark
-                // ring traced around the element rather than a soft shadow)
-                a = Mathf.SmoothStep(0f, 1f, a) * 0.22f;
+                a = Mathf.SmoothStep(0f, 1f, a) * maxAlpha;
                 px[y * size + x] = new Color(0f, 0f, 0f, a);
             }
             tex.SetPixels32(px);
