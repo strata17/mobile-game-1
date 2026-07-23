@@ -150,7 +150,12 @@ namespace Reveal.Game
             // visual rhythm even before anything is revealed, and the
             // darker base peeking out from behind a smaller, lighter face
             // is the same "candy" extrusion used on the bomb badge/buttons.
-            Color accent = (r + c) % 2 == 0 ? Theme.AccentSky : Theme.AccentMint;
+            // Coral/gold, not sky/mint -- those are the two accent colours
+            // already carrying the whole rest of the UI (hearts, coins,
+            // stars, danger clues), so the board's checkerboard now reads
+            // as part of the same game instead of a different one bolted
+            // on top.
+            Color accent = (r + c) % 2 == 0 ? Theme.AccentCoral : Theme.AccentGold;
             rim.sprite = Art.RoundedRect(Theme.RadiusChip, false);
             rim.type = Image.Type.Sliced;
             rim.raycastTarget = false;

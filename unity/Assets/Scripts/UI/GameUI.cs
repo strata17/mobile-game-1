@@ -472,11 +472,14 @@ namespace Reveal.UI
 
             if (GameArt.Mascot != null) HeroImage(_menu, "Mascot", GameArt.Mascot, 245, 600, 330);
 
-            if (GameArt.Logo != null)
-                HeroImage(_menu, "Logo", GameArt.Logo, 515, 640, 190);
-            else
-                UIFactory.Label(_menu, "Title", "REVEAL", 110, _text, TextAnchor.MiddleCenter, FontStyle.Bold)
-                    .rectTransform.anchoredPosition = new Vector2(0, 640);
+            // Not GameArt.Logo -- it's a rainbow gradient-lettered candy
+            // logo with a white outline, a completely different visual
+            // language from the flat coral/gold/purple palette everywhere
+            // else on this screen. A flat-coloured wordmark in the same
+            // font as every other title in the game belongs to the same
+            // game; the rainbow sticker didn't.
+            UIFactory.Label(_menu, "Title", "REVEAL", 110, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold)
+                .rectTransform.anchoredPosition = new Vector2(0, 640);
 
             _streakRow = UIFactory.Container(card, "StreakRow");
             _streakRow.sizeDelta = new Vector2(0, 44);
@@ -816,7 +819,7 @@ namespace Reveal.UI
             for (int i = 0; i < Scenes.Count; i++)
             {
                 bool got = collection.Contains(i);
-                var cell = UIFactory.RoundedPanel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#20233a"), 16, got);
+                var cell = UIFactory.RoundedPanel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#3a3f5c"), 16, got);
                 var pic = got ? GameArt.Picture(Scenes.All[i].Motif) : null;
                 if (pic != null) { cell.sprite = GameArt.SpriteFrom(pic); cell.type = Image.Type.Simple; cell.preserveAspect = true; cell.color = Color.white; }
                 else if (!got)
