@@ -281,12 +281,12 @@ namespace Reveal.UI
             shadowGo.transform.SetParent(card, false);
             shadowGo.transform.SetAsFirstSibling();
             var shadowImg = shadowGo.GetComponent<Image>();
-            shadowImg.sprite = Art.SoftShadow(64, 0.55f);
+            shadowImg.sprite = Art.SoftShadow(40, 0.32f);
             shadowImg.type = Image.Type.Sliced;
             shadowImg.raycastTarget = false;
             var shadowRt = shadowGo.GetComponent<RectTransform>();
             shadowRt.anchorMin = Vector2.zero; shadowRt.anchorMax = Vector2.one;
-            shadowRt.offsetMin = new Vector2(-18, -40); shadowRt.offsetMax = new Vector2(18, 10);
+            shadowRt.offsetMin = new Vector2(-10, -22); shadowRt.offsetMax = new Vector2(10, 6);
             shadowGo.AddComponent<LayoutElement>().ignoreLayout = true;
 
             // Clipping lives on its own child, separate from the card's own
