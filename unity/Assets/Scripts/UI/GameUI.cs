@@ -294,6 +294,26 @@ namespace Reveal.UI
             UIFactory.Stretch(cardGrad.rectTransform);
             cardGradGo.AddComponent<LayoutElement>().ignoreLayout = true;
 
+            // Ornate parchment/filigree texture layered on top of the plain
+            // gradient at reduced opacity. Full-strength this asset's bright
+            // center glow would land at an unpredictable spot behind text
+            // (the card auto-sizes to its content, so its position varies
+            // screen to screen) -- faded, it reads as a rich decorative
+            // texture without ever fighting the text on top of it.
+            var cardTex = GameArt.CardBackground;
+            if (cardTex != null)
+            {
+                var texGo = new GameObject("Texture", typeof(RectTransform), typeof(RawImage));
+                texGo.transform.SetParent(card, false);
+                texGo.transform.SetSiblingIndex(1); // just above the gradient
+                var tex = texGo.GetComponent<RawImage>();
+                tex.texture = cardTex;
+                tex.color = new Color(1f, 1f, 1f, 0.4f);
+                tex.raycastTarget = false;
+                UIFactory.Stretch(tex.rectTransform);
+                texGo.AddComponent<LayoutElement>().ignoreLayout = true;
+            }
+
             var vg = card.gameObject.AddComponent<VerticalLayoutGroup>();
             vg.childAlignment = TextAnchor.UpperCenter;
             vg.spacing = 24; vg.padding = new RectOffset(56, 56, 56, 56);
