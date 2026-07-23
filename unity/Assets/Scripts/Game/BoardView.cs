@@ -121,11 +121,20 @@ namespace Reveal.Game
         {
             // Bombs are hidden now — every cover is identical, so danger is
             // deduced from the revealed clues, not seen on the cover.
+            //
+            // Deliberately NOT using GameArt.Tile (an ornate, photoreal
+            // engraved-medallion render) here anymore. It was the single
+            // biggest source of "this looks off": a busy painterly texture,
+            // tiled 49+ times, sitting between a flat HUD above and a
+            // painted picture below is a third competing visual register on
+            // the one screen the player stares at the whole session. It's
+            // also exactly the kind of fussy small-scale detail that turns
+            // to mush under video compression. Same flat rounded-rect +
+            // gloss language as every button/card in the UI instead.
             var go = new GameObject($"C{r}_{c}", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(_rt, false);
             var rim = go.GetComponent<Image>();
 
-            var realTile = GameArt.Tile;
             float gap = Mathf.Max(4f, _cell * 0.10f);
             var rt = rim.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); // top-left origin
@@ -133,23 +142,10 @@ namespace Reveal.Game
             rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
             rt.anchoredPosition = CellCenter(r, c);
 
-            if (realTile != null)
-            {
-                // Real illustrated mystery-tile art: same for every cover
-                // (bombs stay indistinguishable), no per-scene tint needed.
-                rim.sprite = GameArt.SpriteFrom(realTile);
-                rim.type = Image.Type.Simple;
-                rim.raycastTarget = false;
-                rim.color = Color.white;
-                return rim;
-            }
-
-            // Procedural fallback: neutral pearl face with a scene-coloured
-            // rim. A fill that matches the hidden picture's own hue tends to
-            // blend into it (e.g. pink gems over a pink heart), killing
-            // contrast, so the rim uses the darker BgBottom variant instead
-            // of BgTop for guaranteed contrast on any level.
-            rim.sprite = Art.RoundedRect(20, false);
+            // Darker rim (a scene-coloured base, not the picture's own hue,
+            // so it never blends into what's underneath) reads as a subtle
+            // extruded edge behind the glossy face on top.
+            rim.sprite = Art.RoundedRect(Theme.RadiusChip, false);
             rim.type = Image.Type.Sliced;
             rim.raycastTarget = false;
             rim.color = Color.Lerp(scene.BgBottom, Color.black, 0.15f);
@@ -157,11 +153,13 @@ namespace Reveal.Game
             var faceGo = new GameObject("face", typeof(RectTransform), typeof(Image));
             faceGo.transform.SetParent(go.transform, false);
             var face = faceGo.GetComponent<Image>();
-            face.sprite = Art.RoundedRect(20, true);
+            face.sprite = Art.RoundedRect(Theme.RadiusChip, true);
             face.type = Image.Type.Sliced;
             face.raycastTarget = false;
             face.color = new Color(0.96f, 0.95f, 0.98f, 1f); // neutral pearl
             UIFactory.Stretch(face.rectTransform, _cell * 0.07f);
+
+            UIFactory.AddGloss(faceGo.transform, 0.5f, 0.95f, 0.12f);
 
             return rim;
         }
