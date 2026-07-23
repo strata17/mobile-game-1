@@ -12,6 +12,7 @@ namespace Reveal.UI
     {
         static bool _loaded;
         static Texture2D _bg, _logo, _mascot, _mascotSad, _mascotHappy, _coin, _heartIcon, _chest, _starIcon, _flame, _gear, _splash, _bomb;
+        static Texture2D _tile, _menuBg, _locked, _magnify, _soundIcon, _adTag;
 
         static void EnsureLoaded()
         {
@@ -30,6 +31,12 @@ namespace Reveal.UI
             _flame = Resources.Load<Texture2D>("Art/flame");
             _gear = Resources.Load<Texture2D>("Art/gear");
             _splash = Resources.Load<Texture2D>("Art/splash");
+            _tile = Resources.Load<Texture2D>("Art/tile");
+            _menuBg = Resources.Load<Texture2D>("Art/menu_bg");
+            _locked = Resources.Load<Texture2D>("Art/locked");
+            _magnify = Resources.Load<Texture2D>("Art/magnify");
+            _soundIcon = Resources.Load<Texture2D>("Art/sound_icon");
+            _adTag = Resources.Load<Texture2D>("Art/ad_tag");
         }
 
         static readonly System.Collections.Generic.Dictionary<string, Texture2D> _pics
@@ -69,6 +76,12 @@ namespace Reveal.UI
         public static Texture2D Flame { get { EnsureLoaded(); return _flame; } }
         public static Texture2D Gear { get { EnsureLoaded(); return _gear; } }
         public static Texture2D Splash { get { EnsureLoaded(); return _splash; } }
+        public static Texture2D Tile { get { EnsureLoaded(); return _tile; } }
+        public static Texture2D MenuBackground { get { EnsureLoaded(); return _menuBg; } }
+        public static Texture2D Locked { get { EnsureLoaded(); return _locked; } }
+        public static Texture2D Magnify { get { EnsureLoaded(); return _magnify; } }
+        public static Texture2D SoundIcon { get { EnsureLoaded(); return _soundIcon; } }
+        public static Texture2D AdTag { get { EnsureLoaded(); return _adTag; } }
 
         public static Sprite SpriteFrom(Texture2D tex)
         {

@@ -119,29 +119,40 @@ namespace Reveal.Game
 
         Image MakeCover(int r, int c, Scene scene, bool bomb)
         {
-            // Bombs are hidden now — every cover is an identical glossy gem, so
-            // danger is deduced from the revealed clues, not seen on the cover.
-            // The gem itself is a neutral pearl (not scene-tinted): a fill that
-            // matches the hidden picture's own hue tends to blend into it
-            // (e.g. pink gems over a pink heart), killing contrast. A thin
-            // scene-coloured rim still gives each level its own accent colour.
+            // Bombs are hidden now — every cover is identical, so danger is
+            // deduced from the revealed clues, not seen on the cover.
             var go = new GameObject($"C{r}_{c}", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(_rt, false);
             var rim = go.GetComponent<Image>();
-            rim.sprite = Art.RoundedRect(20, false);
-            rim.type = Image.Type.Sliced;
-            rim.raycastTarget = false;
-            // Darker scene variant for the rim: BgTop matches the artwork's
-            // own hue too closely (invisible rim on same-coloured levels);
-            // the darker BgBottom stays on-palette but keeps contrast.
-            rim.color = Color.Lerp(scene.BgBottom, Color.black, 0.15f);
 
+            var realTile = GameArt.Tile;
             float gap = Mathf.Max(4f, _cell * 0.10f);
             var rt = rim.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); // top-left origin
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
             rt.anchoredPosition = CellCenter(r, c);
+
+            if (realTile != null)
+            {
+                // Real illustrated mystery-tile art: same for every cover
+                // (bombs stay indistinguishable), no per-scene tint needed.
+                rim.sprite = GameArt.SpriteFrom(realTile);
+                rim.type = Image.Type.Simple;
+                rim.raycastTarget = false;
+                rim.color = Color.white;
+                return rim;
+            }
+
+            // Procedural fallback: neutral pearl face with a scene-coloured
+            // rim. A fill that matches the hidden picture's own hue tends to
+            // blend into it (e.g. pink gems over a pink heart), killing
+            // contrast, so the rim uses the darker BgBottom variant instead
+            // of BgTop for guaranteed contrast on any level.
+            rim.sprite = Art.RoundedRect(20, false);
+            rim.type = Image.Type.Sliced;
+            rim.raycastTarget = false;
+            rim.color = Color.Lerp(scene.BgBottom, Color.black, 0.15f);
 
             var faceGo = new GameObject("face", typeof(RectTransform), typeof(Image));
             faceGo.transform.SetParent(go.transform, false);

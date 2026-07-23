@@ -36,6 +36,7 @@ namespace Reveal.UI
         Button _dailyBtn;
         RectTransform _missionsList, _collectionRow;
         Button _hintBtn;
+        GameObject _hintAdTag;
 
         public RectTransform BoardHost => _boardHost;
 
@@ -207,10 +208,41 @@ namespace Reveal.UI
             rt.anchoredPosition = new Vector2(0, 60);
             rt.sizeDelta = new Vector2(640, 96);
             _hintBtn.onClick.AddListener(() => OnHint?.Invoke());
+
+            if (GameArt.Magnify != null)
+            {
+                var mi = new GameObject("Magnify", typeof(RectTransform), typeof(Image));
+                mi.transform.SetParent(_hintBtn.transform, false);
+                var mimg = mi.GetComponent<Image>();
+                mimg.sprite = GameArt.SpriteFrom(GameArt.Magnify);
+                mimg.preserveAspect = true;
+                mimg.raycastTarget = false;
+                var mrt = mi.GetComponent<RectTransform>();
+                mrt.anchorMin = mrt.anchorMax = new Vector2(0f, 0.5f);
+                mrt.pivot = new Vector2(0f, 0.5f);
+                mrt.anchoredPosition = new Vector2(16, 0);
+                mrt.sizeDelta = new Vector2(56, 56);
+            }
+
+            if (GameArt.AdTag != null)
+            {
+                var ai = new GameObject("AdTag", typeof(RectTransform), typeof(Image));
+                ai.transform.SetParent(_hintBtn.transform, false);
+                var aimg = ai.GetComponent<Image>();
+                aimg.sprite = GameArt.SpriteFrom(GameArt.AdTag);
+                aimg.preserveAspect = true;
+                aimg.raycastTarget = false;
+                var art = ai.GetComponent<RectTransform>();
+                art.anchorMin = art.anchorMax = new Vector2(1f, 0.5f);
+                art.pivot = new Vector2(1f, 0.5f);
+                art.anchoredPosition = new Vector2(-16, 0);
+                art.sizeDelta = new Vector2(48, 48);
+                _hintAdTag = ai;
+            }
         }
 
         // ---------------- overlays ----------------
-        RectTransform Overlay(string name, out RectTransform card, bool opaque = false, float scrimAlpha = 0.88f)
+        RectTransform Overlay(string name, out RectTransform card, bool opaque = false, float scrimAlpha = 0.88f, Texture2D bgOverride = null)
         {
             RectTransform ov;
             if (opaque)
@@ -219,8 +251,9 @@ namespace Reveal.UI
                 var go = new GameObject(name, typeof(RectTransform), typeof(RawImage));
                 go.transform.SetParent(_root, false);
                 var ri = go.GetComponent<RawImage>();
-                var bgArt = GameArt.Background;
+                var bgArt = bgOverride != null ? bgOverride : GameArt.Background;
                 ri.texture = bgArt != null ? bgArt : Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
+                ri.uvRect = new Rect(0, 0, 1, 1);
                 ov = go.GetComponent<RectTransform>();
             }
             else
@@ -358,7 +391,7 @@ namespace Reveal.UI
 
         void BuildMenu()
         {
-            _menu = Overlay("Menu", out var card, opaque: true);
+            _menu = Overlay("Menu", out var card, opaque: true, bgOverride: GameArt.MenuBackground);
 
             // Card: a slim gradient panel in the lower two-thirds; the hero
             // art (mascot + logo + coin) sits on the background above it.
@@ -544,9 +577,23 @@ namespace Reveal.UI
             _nearMiss.rectTransform.sizeDelta = new Vector2(0, 50);
             _goScore = UIFactory.Label(card, "Score", "Score: 0", 38, _muted);
             _goScore.rectTransform.sizeDelta = new Vector2(0, 60);
-            var cont = UIFactory.Button(card, "Continue", "Continue — clear the bombs (AD)", _accent, Color.white, 30);
+            var cont = UIFactory.Button(card, "Continue", "Continue — clear the bombs", _accent, Color.white, 30);
             ((RectTransform)cont.transform).sizeDelta = new Vector2(0, 120);
             cont.onClick.AddListener(() => OnContinueAd?.Invoke());
+            if (GameArt.AdTag != null)
+            {
+                var ai = new GameObject("AdTag", typeof(RectTransform), typeof(Image));
+                ai.transform.SetParent(cont.transform, false);
+                var aimg = ai.GetComponent<Image>();
+                aimg.sprite = GameArt.SpriteFrom(GameArt.AdTag);
+                aimg.preserveAspect = true;
+                aimg.raycastTarget = false;
+                var art = ai.GetComponent<RectTransform>();
+                art.anchorMin = art.anchorMax = new Vector2(1f, 0.5f);
+                art.pivot = new Vector2(1f, 0.5f);
+                art.anchoredPosition = new Vector2(-18, 0);
+                art.sizeDelta = new Vector2(52, 52);
+            }
             var retry = UIFactory.Button(card, "Retry", "Retry level", _cardBg, _text, 34);
             ((RectTransform)retry.transform).sizeDelta = new Vector2(0, 100);
             retry.onClick.AddListener(() => OnRetry?.Invoke());
@@ -561,6 +608,20 @@ namespace Reveal.UI
             var snd = UIFactory.Button(card, "Sound", "Sound: On", _cardBg, _text, 34);
             ((RectTransform)snd.transform).sizeDelta = new Vector2(0, 100);
             snd.onClick.AddListener(() => { OnToggleSound?.Invoke(); snd.GetComponentInChildren<Text>().text = "Sound: " + (SaveSystem.SoundOn ? "On" : "Off"); });
+            if (GameArt.SoundIcon != null)
+            {
+                var si = new GameObject("SoundIcon", typeof(RectTransform), typeof(Image));
+                si.transform.SetParent(snd.transform, false);
+                var simg = si.GetComponent<Image>();
+                simg.sprite = GameArt.SpriteFrom(GameArt.SoundIcon);
+                simg.preserveAspect = true;
+                simg.raycastTarget = false;
+                var srt = si.GetComponent<RectTransform>();
+                srt.anchorMin = srt.anchorMax = new Vector2(0f, 0.5f);
+                srt.pivot = new Vector2(0f, 0.5f);
+                srt.anchoredPosition = new Vector2(20, 0);
+                srt.sizeDelta = new Vector2(56, 56);
+            }
             UIFactory.Label(card, "Ver", "Reveal 3.0 · numbers show bombs nearby · clear 70%", 24, _muted)
                 .rectTransform.sizeDelta = new Vector2(0, 60);
             var done = UIFactory.Button(card, "Done", "Done", _primary, Color.white, 38);
@@ -628,10 +689,12 @@ namespace Reveal.UI
 
         public void SetHintButton(int coins)
         {
+            bool usesAd = coins < GameConfig.HintCost;
             var t = _hintBtn.GetComponentInChildren<Text>();
-            t.text = coins >= GameConfig.HintCost
-                ? $"Reveal a safe tile · {GameConfig.HintCost} coins"
-                : "Reveal a safe tile (AD)";
+            t.text = usesAd
+                ? "Reveal a safe tile"
+                : $"Reveal a safe tile · {GameConfig.HintCost} coins";
+            if (_hintAdTag != null) _hintAdTag.SetActive(usesAd);
         }
 
         public void ShowInGame(bool show)
@@ -694,6 +757,13 @@ namespace Reveal.UI
                 var cell = UIFactory.RoundedPanel(_collectionRow, "g", got ? Scenes.All[i].BgTop : UIFactory.Hex("#20233a"), 16, got);
                 var pic = got ? GameArt.Picture(Scenes.All[i].Motif) : null;
                 if (pic != null) { cell.sprite = GameArt.SpriteFrom(pic); cell.type = Image.Type.Simple; cell.preserveAspect = true; cell.color = Color.white; }
+                else if (!got && GameArt.Locked != null)
+                {
+                    cell.sprite = GameArt.SpriteFrom(GameArt.Locked);
+                    cell.type = Image.Type.Simple;
+                    cell.preserveAspect = true;
+                    cell.color = Color.white;
+                }
             }
         }
 
