@@ -142,13 +142,19 @@ namespace Reveal.Game
             rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
             rt.anchoredPosition = CellCenter(r, c);
 
-            // Darker rim (a scene-coloured base, not the picture's own hue,
-            // so it never blends into what's underneath) reads as a subtle
-            // extruded edge behind the glossy face on top.
+            // A near-white flat fill with a thin outline reads as an empty
+            // checkbox, not a game tile -- flat design still needs real
+            // saturated colour and tactile depth to feel alive (Two Dots,
+            // Candy Crush's own gems are bold flat colour, not pale grey).
+            // Two alternating accents in a checkerboard give the board some
+            // visual rhythm even before anything is revealed, and the
+            // darker base peeking out from behind a smaller, lighter face
+            // is the same "candy" extrusion used on the bomb badge/buttons.
+            Color accent = (r + c) % 2 == 0 ? Theme.AccentSky : Theme.AccentMint;
             rim.sprite = Art.RoundedRect(Theme.RadiusChip, false);
             rim.type = Image.Type.Sliced;
             rim.raycastTarget = false;
-            rim.color = Color.Lerp(scene.BgBottom, Color.black, 0.15f);
+            rim.color = Color.Lerp(accent, Color.black, 0.28f);
 
             var faceGo = new GameObject("face", typeof(RectTransform), typeof(Image));
             faceGo.transform.SetParent(go.transform, false);
@@ -156,7 +162,7 @@ namespace Reveal.Game
             face.sprite = Art.RoundedRect(Theme.RadiusChip, true);
             face.type = Image.Type.Sliced;
             face.raycastTarget = false;
-            face.color = new Color(0.96f, 0.95f, 0.98f, 1f); // neutral pearl
+            face.color = Color.Lerp(accent, Color.white, 0.18f);
             UIFactory.Stretch(face.rectTransform, _cell * 0.07f);
 
             UIFactory.AddGloss(faceGo.transform, 0.5f, 0.95f, 0.12f);
