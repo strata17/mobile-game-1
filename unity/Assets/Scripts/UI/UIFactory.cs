@@ -83,6 +83,26 @@ namespace Reveal.UI
             shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
             shadow.effectDistance = new Vector2(0, -5);
 
+            // Real photographed pearl-material texture (tinted per button
+            // colour) instead of a flat fill, when the asset is available.
+            // Tints cleanly across any button colour since the source
+            // material is neutral white/pearl -- multiplying white by a
+            // colour reproduces that colour exactly, unlike trying to
+            // re-tint an already-coloured render.
+            var buttonMat = GameArt.ButtonMaterial;
+            if (buttonMat != null)
+            {
+                go.AddComponent<Mask>().showMaskGraphic = true;
+                var matGo = new GameObject("Material", typeof(RectTransform), typeof(RawImage));
+                matGo.transform.SetParent(go.transform, false);
+                matGo.transform.SetAsFirstSibling();
+                var mat = matGo.GetComponent<RawImage>();
+                mat.texture = buttonMat;
+                mat.color = bg;
+                mat.raycastTarget = false;
+                Stretch(mat.rectTransform);
+            }
+
             AddGloss(go.transform);
 
             var txt = Label(go.transform, "Label", label, size, fg, TextAnchor.MiddleCenter, FontStyle.Bold);

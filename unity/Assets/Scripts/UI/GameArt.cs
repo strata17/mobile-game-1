@@ -12,7 +12,7 @@ namespace Reveal.UI
     {
         static bool _loaded;
         static Texture2D _bg, _logo, _mascot, _mascotSad, _mascotHappy, _coin, _heartIcon, _chest, _starIcon, _flame, _gear, _splash, _bomb;
-        static Texture2D _tile, _menuBg, _locked, _magnify, _soundIcon, _adTag;
+        static Texture2D _tile, _menuBg, _locked, _magnify, _soundIcon, _adTag, _buttonMaterial;
 
         static void EnsureLoaded()
         {
@@ -37,6 +37,7 @@ namespace Reveal.UI
             _magnify = Resources.Load<Texture2D>("Art/magnify");
             _soundIcon = Resources.Load<Texture2D>("Art/sound_icon");
             _adTag = Resources.Load<Texture2D>("Art/ad_tag");
+            _buttonMaterial = Resources.Load<Texture2D>("Art/button_material");
         }
 
         static readonly System.Collections.Generic.Dictionary<string, Texture2D> _pics
@@ -82,6 +83,7 @@ namespace Reveal.UI
         public static Texture2D Magnify { get { EnsureLoaded(); return _magnify; } }
         public static Texture2D SoundIcon { get { EnsureLoaded(); return _soundIcon; } }
         public static Texture2D AdTag { get { EnsureLoaded(); return _adTag; } }
+        public static Texture2D ButtonMaterial { get { EnsureLoaded(); return _buttonMaterial; } }
 
         public static Sprite SpriteFrom(Texture2D tex)
         {
