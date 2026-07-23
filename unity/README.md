@@ -7,8 +7,8 @@ scenes/prefabs) so the whole thing is reviewable and reproducible from source.
 
 ## Requirements
 
-- **Unity 2022.3 LTS** (see `ProjectSettings/ProjectVersion.txt`). Any 2022.3.x
-  works; newer LTS should import fine and may prompt an upgrade.
+- **Unity 6** (`6000.5.4f1`, see `ProjectSettings/ProjectVersion.txt`). Any
+  Unity 6 patch works; 2022.3 LTS also imports fine and may prompt an upgrade.
 - iOS build: Xcode + an Apple Developer account.
 - Android build: Android Build Support module (installed via Unity Hub).
 
@@ -64,6 +64,31 @@ pressure in the first session (`NoAdsBeforeLevel`), then one every Nth loss
 (`InterstitialEveryNLosses`). Rewarded video powers the opt-in *Continue* and
 *Hint* features. Tune all of it in `GameConfig`.
 
+## Art assets
+
+Imported art lives in `Assets/Resources/Art/` and is loaded by `GameArt` with
+procedural fallbacks, so the project always builds even if a file is missing:
+
+- `bg.png` — menu / in-game background
+- `logo.png` — title wordmark
+- `mascot.png` — fox mascot (transparent cutout)
+- `icon.png` — app icon (also used by the build setup below)
+- `pics/<motif>.png` — the hidden reveal pictures (`sun`, `star`, `heart`,
+  `diamond`, `flower`, `moon`, `rocket`, `balloon`, `rainbow`, `cloud`,
+  `planet`, `bolt`). Any motif without its own file reuses one of the others
+  (see `GameArt._alias`), so every level shows real art.
+
+Reveal pictures are center-cropped to a square at runtime, so any aspect ratio
+(1:1 or 16:9) fills the board without distortion.
+
+## Player settings (automated)
+
+`Assets/Editor/RevealBuildSetup.cs` configures Player Settings for a store
+build in code — product/company name, bundle id, **portrait lock**, splash,
+and the app icon from `Resources/Art/icon.png`. It runs once on project load
+and can be re-run from the **Reveal → Configure Player Settings** menu. Change
+the bundle id / company constants there before shipping.
+
 ## Building
 
 - **Android**: File → Build Settings → Android → add `Main.unity` → Build
@@ -71,5 +96,17 @@ pressure in the first session (`NoAdsBeforeLevel`), then one every Nth loss
 - **iOS**: File → Build Settings → iOS → Build → open the Xcode project → set
   your team/signing → Archive.
 
-Set the bundle id, app name, icons and portrait orientation in **Player
-Settings** before shipping.
+## Store submission checklist
+
+Code + assets are in place; these final steps require your accounts and can't
+be done from the repo:
+
+1. **Ad network**: create an AppLovin/ironSource LevelPlay account, import the
+   SDK, add the `REVEAL_LEVELPLAY` define, and paste your app keys + ad unit
+   ids (see the Ads section above). Until then the game runs on mock ads.
+2. **Developer accounts**: Apple Developer Program ($99/yr) and/or Google Play
+   Console ($25 one-time).
+3. **Store listing**: screenshots, feature graphic, description, category, and
+   a **privacy policy URL** (required — ad SDKs collect data; declare it in
+   App Store Privacy / Play Data Safety).
+4. **Device testing**: test on a real iOS and Android device before submitting.

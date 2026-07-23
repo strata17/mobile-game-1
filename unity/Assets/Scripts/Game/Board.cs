@@ -19,6 +19,9 @@ namespace Reveal.Game
         public bool[,] Revealed;
         public bool[,] Bomb;
         public bool[,] Bonus;
+        public int[,] Adj;      // number of bombs in the 8 neighbours (Minesweeper clue)
+
+        bool _firstMove = true; // the player's first tap is always safe
 
         public int NonBombTotal { get; private set; }
         public int RevealedSafe { get; private set; }
@@ -77,12 +80,56 @@ namespace Reveal.Game
                 Revealed[r, c] = true;
                 RevealedSafe++;
             }
+
+            ComputeAdj();
+        }
+
+        /// <summary>Recompute the adjacent-bomb count for every cell.</summary>
+        void ComputeAdj()
+        {
+            Adj = new int[Size, Size];
+            for (int r = 0; r < Size; r++)
+                for (int c = 0; c < Size; c++)
+                {
+                    if (Bomb[r, c]) continue;
+                    int n = 0;
+                    for (int dr = -1; dr <= 1; dr++)
+                        for (int dc = -1; dc <= 1; dc++)
+                        {
+                            if (dr == 0 && dc == 0) continue;
+                            int nr = r + dr, nc = c + dc;
+                            if (nr >= 0 && nc >= 0 && nr < Size && nc < Size && Bomb[nr, nc]) n++;
+                        }
+                    Adj[r, c] = n;
+                }
+        }
+
+        public int Adjacent(int r, int c) => Adj[r, c];
+
+        /// <summary>Live bomb count (0 after DefuseAllBombs).</summary>
+        public int BombCount
+        {
+            get
+            {
+                int n = 0;
+                for (int r = 0; r < Size; r++)
+                    for (int c = 0; c < Size; c++)
+                        if (Bomb[r, c]) n++;
+                return n;
+            }
         }
 
         public RevealResult Reveal(int r, int c)
         {
             if (r < 0 || c < 0 || r >= Size || c >= Size) return RevealResult.Nothing;
             if (Revealed[r, c]) return RevealResult.Nothing;
+
+            // The first tap of a level never detonates — relocate the bomb.
+            if (_firstMove)
+            {
+                _firstMove = false;
+                if (Bomb[r, c]) RelocateBomb(r, c);
+            }
 
             if (Bomb[r, c])
             {
@@ -112,12 +159,28 @@ namespace Reveal.Game
             return true;
         }
 
+        /// <summary>Move the bomb at (r,c) to a random hidden safe cell.</summary>
+        void RelocateBomb(int r, int c)
+        {
+            var opts = new List<(int, int)>();
+            for (int rr = 0; rr < Size; rr++)
+                for (int cc = 0; cc < Size; cc++)
+                    if (!Bomb[rr, cc] && !Revealed[rr, cc] && !(rr == r && cc == c))
+                        opts.Add((rr, cc));
+            if (opts.Count == 0) return;
+            var pick = opts[new System.Random().Next(opts.Count)];
+            Bomb[r, c] = false;
+            Bomb[pick.Item1, pick.Item2] = true;
+            ComputeAdj();
+        }
+
         /// <summary>Continue reward: clear every bomb so the run can resume.</summary>
         public void DefuseAllBombs()
         {
             for (int r = 0; r < Size; r++)
                 for (int c = 0; c < Size; c++)
                     Bomb[r, c] = false;
+            ComputeAdj();
         }
 
         static void Shuffle<T>(List<T> list, System.Random rng)

@@ -24,6 +24,18 @@ namespace Reveal.UI
             return go.GetComponent<RectTransform>();
         }
 
+        /// <summary>A rounded, optionally glossy filled panel (candy surface).</summary>
+        public static Image RoundedPanel(Transform parent, string name, Color color, int radius = 28, bool glossy = false)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(radius, glossy);
+            img.type = Image.Type.Sliced;
+            img.color = color;
+            return img;
+        }
+
         public static RectTransform Container(Transform parent, string name)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -38,7 +50,11 @@ namespace Reveal.UI
             go.transform.SetParent(parent, false);
             var t = go.GetComponent<Text>();
             t.text = text;
-            t.font = DefaultFont;
+            // Use the lighter Medium weight for non-bold labels so Unity's
+            // synthetic emboldening never has to stack on top of an
+            // already-700-weight face (which would look overly heavy) --
+            // only applies when both weights are actually available.
+            t.font = style == FontStyle.Normal && MediumFont != null ? MediumFont : DefaultFont;
             t.fontSize = size;
             t.color = color;
             t.alignment = anchor;
@@ -49,19 +65,97 @@ namespace Reveal.UI
             return t;
         }
 
+        /// <summary>
+        /// A "candy" button: rounded, glossy face sitting on a darker extruded
+        /// base, with a scale-down press animation. The 3D base is a sibling
+        /// image behind the face so the button reads as a physical, tappable
+        /// object rather than a flat rectangle.
+        /// </summary>
         public static Button Button(Transform parent, string name, string label, Color bg, Color fg, int size = 34)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(Theme.RadiusControl, true);
+            img.type = Image.Type.Sliced;
             img.color = bg;
             var btn = go.GetComponent<Button>();
+            btn.transition = Selectable.Transition.None; // handled by PressPop
+
+            // Soft depth via a built-in Shadow effect (robust under layout groups).
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
+            shadow.effectDistance = new Vector2(0, -5);
+
+            // Flat colour fill (already set on `img` above) + a procedural
+            // top-gloss overlay is the entire button surface -- no
+            // photoreal material texture. A rendered pearl/plastic photo
+            // sitting on a flat vector button is the exact "mixing flat and
+            // skeuomorphic" clash that made every screen feel incoherent;
+            // one flat glossy language, applied everywhere, reads as an
+            // actual design system instead of a pile of one-off looks.
+            AddGloss(go.transform);
 
             var txt = Label(go.transform, "Label", label, size, fg, TextAnchor.MiddleCenter, FontStyle.Bold);
             var rt = txt.rectTransform;
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            go.AddComponent<PressPop>();
             return btn;
+        }
+
+        /// <summary>
+        /// A visually-subordinate "ghost" button: translucent tinted fill,
+        /// coloured outline, no drop shadow, no gloss. Every screen so far
+        /// gave secondary actions (Daily Reward, etc.) the exact same solid
+        /// gloss+shadow treatment as the primary CTA, so the two competed
+        /// for attention instead of one clearly leading -- a flagged
+        /// anti-pattern (each screen should have exactly one primary
+        /// action). Use this for anything that isn't THE thing the player
+        /// should tap first.
+        /// </summary>
+        public static Button GhostButton(Transform parent, string name, string label, Color accent, int size = 30)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(Theme.RadiusControl, false);
+            img.type = Image.Type.Sliced;
+            img.color = new Color(accent.r, accent.g, accent.b, 0.16f);
+            var btn = go.GetComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+
+            var edge = go.AddComponent<Outline>();
+            edge.effectColor = new Color(accent.r, accent.g, accent.b, 0.65f);
+            edge.effectDistance = new Vector2(2f, -2f);
+
+            var txt = Label(go.transform, "Label", label, size, accent, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var rt = txt.rectTransform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            go.AddComponent<PressPop>();
+            return btn;
+        }
+
+        /// <summary>
+        /// A soft top-highlight overlay, inset from the edges so its sharp
+        /// rectangular corners stay comfortably inside the parent's rounded
+        /// silhouette. See Art.TopGloss for why this beats baking gloss into
+        /// a 9-sliced base sprite.
+        /// </summary>
+        public static void AddGloss(Transform parent, float lowerY = 0.42f, float upperY = 0.92f, float insetFrac = 0.05f)
+        {
+            var go = new GameObject("Gloss", typeof(RectTransform), typeof(RawImage));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<RawImage>();
+            img.texture = Art.TopGloss();
+            img.raycastTarget = false;
+            var rt = img.rectTransform;
+            rt.anchorMin = new Vector2(insetFrac, lowerY);
+            rt.anchorMax = new Vector2(1f - insetFrac, upperY);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
         }
 
         /// <summary>Stretch a RectTransform to fill its parent.</summary>
@@ -87,12 +181,32 @@ namespace Reveal.UI
             {
                 if (_font == null)
                 {
-                    // LegacyRuntime.ttf is the built-in font on modern Unity;
-                    // fall back to Arial on older versions.
-                    _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                    // Baloo 2 (SIL Open Font License) -- a rounded, playful
+                    // display face that matches the glossy candy/kawaii
+                    // aesthetic. Every other UI text was using Unity's plain
+                    // system font, which clashed with the illustrated art.
+                    // Falls back to the system font if the asset is ever
+                    // missing, so the project always compiles and runs.
+                    _font = Resources.Load<Font>("Fonts/Baloo2-Bold");
+                    if (_font == null) _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                     if (_font == null) _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
                 }
                 return _font;
+            }
+        }
+
+        static Font _mediumFont;
+        static bool _mediumLoaded;
+        public static Font MediumFont
+        {
+            get
+            {
+                if (!_mediumLoaded)
+                {
+                    _mediumLoaded = true;
+                    _mediumFont = Resources.Load<Font>("Fonts/Baloo2-Medium");
+                }
+                return _mediumFont;
             }
         }
 

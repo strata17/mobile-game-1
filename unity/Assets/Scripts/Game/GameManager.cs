@@ -58,6 +58,16 @@ namespace Reveal.Game
             _ui.OnCloseSettings = () => _ui.ShowSettings(false);
             _ui.OnReset = ResetProgress;
             _ui.OnToggleSound = () => SaveSystem.SoundOn = !SaveSystem.SoundOn;
+            _ui.OnHome = () =>
+            {
+                _playing = false;
+                _ui.ShowSettings(false);
+                _ui.HideLevelComplete();
+                _ui.HideGameOver();
+                _ui.ShowInGame(false);
+                RefreshMenu();
+                _ui.ShowMenu(true);
+            };
         }
 
         // ---------------- flow ----------------
@@ -75,7 +85,8 @@ namespace Reveal.Game
             _startTime = Time.time;
 
             var scene = Scenes.ForLevel(_level);
-            _pic = MotifPainter.Paint(scene);
+            var real = Reveal.UI.GameArt.Picture(scene.Motif);
+            _pic = real != null ? real : MotifPainter.Paint(scene);
             float sizePx = _ui.BoardHost.rect.width;
             if (sizePx <= 1) sizePx = 980;
             _view.Load(_board, _pic, sizePx);
@@ -83,40 +94,62 @@ namespace Reveal.Game
             _ui.ShowInGame(true);
             _ui.SetHud(_coins, _level, _score, _best);
             _ui.SetHearts(_hearts);
+            _ui.SetBombInfo(_board.BombCount);
             _ui.SetHintButton(_coins);
+            _ui.ShowTutorial(!SaveSystem.TutorialDone);
             UpdateProgress();
         }
 
         void OnScratch(int r, int c)
         {
             if (!_playing) return;
+            if (!SaveSystem.TutorialDone)
+            {
+                SaveSystem.TutorialDone = true;
+                _ui.ShowTutorial(false);
+            }
+            bool wasBonus = _board.Bonus[r, c]; // read before Reveal() (state doesn't change, safe either way)
             var result = _board.Reveal(r, c);
+
+            // A bonus tile always pays out, even on the move that also wins
+            // the level (Board.Reveal returns Win, not Bonus, in that case —
+            // otherwise the coin reward would silently be dropped).
+            if (wasBonus && (result == RevealResult.Bonus || result == RevealResult.Win))
+            {
+                AddCoins(GameConfig.BonusCoin);
+                Missions.Progress(MissionType.FindBonus, 1);
+                Missions.Progress(MissionType.EarnCoins, GameConfig.BonusCoin);
+                Sfx.Instance.Bonus();
+            }
+
             switch (result)
             {
                 case RevealResult.Nothing:
                     return;
                 case RevealResult.Safe:
                     _view.RevealTile(r, c);
+                    _view.ShowClue(r, c, _board.Adjacent(r, c));
                     _score += 10;
                     Sfx.Instance.Scratch();
                     break;
                 case RevealResult.Bonus:
                     _view.RevealTile(r, c);
-                    AddCoins(GameConfig.BonusCoin);
-                    Missions.Progress(MissionType.FindBonus, 1);
-                    Missions.Progress(MissionType.EarnCoins, GameConfig.BonusCoin);
-                    Sfx.Instance.Bonus();
+                    _view.ShowClue(r, c, _board.Adjacent(r, c));
                     break;
                 case RevealResult.Bomb:
                     _view.RevealTile(r, c);
+                    _view.ShowBombMark(r, c);
                     _hearts--;
                     _ui.SetHearts(_hearts);
                     Sfx.Instance.Bomb();
+                    Haptics.Buzz();
                     if (_hearts <= 0) { GameOver(); return; }
                     break;
                 case RevealResult.Win:
                     _view.RevealTile(r, c);
+                    _view.ShowClue(r, c, _board.Adjacent(r, c));
                     Sfx.Instance.Win();
+                    Haptics.Buzz();
                     LevelComplete();
                     return;
             }
@@ -141,9 +174,11 @@ namespace Reveal.Game
             _score += points;
             if (_score > _best) { _best = _score; SaveSystem.Best = _best; }
 
-            // Collection: record the revealed picture.
+            // Collection: record the revealed picture (note first-time unlocks).
+            int motifIndex = (_level - 1) % Scenes.Count;
             var col = SaveSystem.Collection;
-            col.Add((_level - 1) % Scenes.Count);
+            bool newPicture = !col.Contains(motifIndex);
+            col.Add(motifIndex);
             SaveSystem.Collection = col;
 
             // Missions
@@ -160,6 +195,10 @@ namespace Reveal.Game
                 coins += chestCoins;
                 unlock = $"Chapter chest! +{chestCoins} coins";
             }
+            else if (newPicture)
+            {
+                unlock = "New picture added to your gallery!";
+            }
 
             AddCoins(coins);
             Missions.Progress(MissionType.EarnCoins, coins);
@@ -169,7 +208,18 @@ namespace Reveal.Game
 
             _ui.ShowInGame(false);
             _ui.SetHud(_coins, _level, _score, _best);
-            _ui.ShowLevelComplete(_level - 1, points, coins, unlock);
+
+            // Payoff beat: pop the remaining covers and let the finished
+            // picture show clean for a moment before the results card.
+            _view.CelebrateReveal();
+            StartCoroutine(ShowLevelCompleteAfterBeat(_level - 1, points, coins, unlock, stars, isChest));
+        }
+
+        System.Collections.IEnumerator ShowLevelCompleteAfterBeat(
+            int level, int points, int coins, string unlock, int stars, bool isChest)
+        {
+            yield return new WaitForSecondsRealtime(1.1f);
+            _ui.ShowLevelComplete(level, points, coins, unlock, stars, isChest);
             RefreshMenu();
         }
 
@@ -177,6 +227,7 @@ namespace Reveal.Game
         {
             _playing = false;
             _ui.ShowInGame(false);
+            _view.RevealBombs();   // show where the bombs were — feels fair, not random
 
             // Near-miss framing (loss aversion): how close were they?
             int pct = Mathf.Min(99, Mathf.RoundToInt(_board.Progress * 100));
@@ -203,6 +254,7 @@ namespace Reveal.Game
                 _ui.HideGameOver();
                 _ui.ShowInGame(true);
                 _ui.SetHearts(_hearts);
+                _ui.SetBombInfo(0); // all defused — advertise the free-scratch reward
                 UpdateProgress();
             });
         }
@@ -228,6 +280,7 @@ namespace Reveal.Game
             {
                 var res = _board.Reveal(r, c);
                 _view.RevealTile(r, c);
+                _view.ShowClue(r, c, _board.Adjacent(r, c));
                 Sfx.Instance.Coin();
                 if (res == RevealResult.Win) { LevelComplete(); return; }
                 _ui.SetHud(_coins, _level, _score, _best);
@@ -261,13 +314,17 @@ namespace Reveal.Game
             RefreshMenu();
         }
 
+        // Rebuilds menu content only — deliberately does NOT activate the
+        // menu screen. It used to call ShowMenu(true), which silently
+        // re-opened the opaque menu behind the level-complete card on every
+        // win, hiding the just-revealed picture. Callers that actually want
+        // the menu visible show it explicitly.
         void RefreshMenu()
         {
             _ui.SetMenuMeta(SaveSystem.Streak, _level, SaveSystem.Collection);
             bool dailyAvailable = SaveSystem.LastDailyDay != SaveSystem.Today;
             _ui.SetDailyButton(dailyAvailable, GameConfig.DailyAmount(SaveSystem.Streak + 1));
             _ui.SetMissions(Missions.Active);
-            _ui.ShowMenu(true);
         }
 
         void AddCoins(int delta)

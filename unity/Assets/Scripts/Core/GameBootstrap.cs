@@ -47,6 +47,19 @@ namespace Reveal.Core
             scaler.referenceResolution = new Vector2(1080, 1920);
             scaler.matchWidthOrHeight = 0.5f;
 
+            // Flat procedural gradient backdrop (behind all UI) -- not the
+            // painterly rendered sky art, for the same reason every other
+            // full-screen backdrop dropped it: a photoreal image behind
+            // flat vector UI reads as two different games stitched together.
+            var bgGo = new GameObject("Background", typeof(RectTransform), typeof(RawImage));
+            bgGo.transform.SetParent(canvasGo.transform, false);
+            var bg = bgGo.GetComponent<RawImage>();
+            bg.texture = Art.Gradient(Theme.BgTop, Theme.BgBottom);
+            bg.raycastTarget = false;
+            var bgRt = bg.rectTransform;
+            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+
             // Services
             var services = new GameObject("Services");
             services.transform.SetParent(root.transform, false);
@@ -62,6 +75,8 @@ namespace Reveal.Core
 
             var gm = services.AddComponent<GameManager>();
             gm.Init(ui, view);
+
+            SplashScreen.ShowIfAvailable(canvasGo.transform);
 
             Application.targetFrameRate = 60;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;

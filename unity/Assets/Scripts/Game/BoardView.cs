@@ -20,6 +20,9 @@ namespace Reveal.Game
         Board _board;
         RectTransform _rt;
         RawImage _picture;
+        RawImage _gridOverlay;
+        RectTransform _clueLayer;
+        RectTransform _bombLayer;
         Image[,] _covers;
         float _cell;
 
@@ -29,11 +32,41 @@ namespace Reveal.Game
             _rt.anchorMin = _rt.anchorMax = new Vector2(0.5f, 0.5f);
             _rt.pivot = new Vector2(0.5f, 0.5f);
 
+            // Round the whole board and clip children to it (rounded picture +
+            // tiles). The mask graphic doubles as the board's backing colour.
+            var frame = _rt.gameObject.AddComponent<Image>();
+            frame.sprite = Art.RoundedRect(40, false);
+            frame.type = Image.Type.Sliced;
+            frame.color = UIFactory.Hex("#0e1024");
+            var mask = _rt.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = true;
+
             var picGo = new GameObject("Picture", typeof(RectTransform), typeof(RawImage));
             picGo.transform.SetParent(_rt, false);
             _picture = picGo.GetComponent<RawImage>();
             UIFactory.Stretch(_picture.rectTransform);
             _picture.raycastTarget = false;
+
+            // Persistent per-cell grid lines, above the picture. Keeps every
+            // cell's boundary visible even after its cover is revealed, so a
+            // clue number always sits inside a clearly-bounded tile instead
+            // of looking like it's floating over the artwork.
+            var gridGo = new GameObject("Grid", typeof(RectTransform), typeof(RawImage));
+            gridGo.transform.SetParent(_rt, false);
+            _gridOverlay = gridGo.GetComponent<RawImage>();
+            _gridOverlay.raycastTarget = false;
+            UIFactory.Stretch(_gridOverlay.rectTransform);
+
+            // Clue layer sits above the grid, below the covers.
+            _clueLayer = UIFactory.Container(_rt, "Clues");
+            UIFactory.Stretch(_clueLayer);
+
+            // Bomb marks (drawn on hit / game-over reveal) get their own
+            // layer so Load() can clear them between levels -- otherwise a
+            // Continue (which reloads the board after defusing) would leave
+            // stale bomb graphics behind from the previous attempt.
+            _bombLayer = UIFactory.Container(_rt, "Bombs");
+            UIFactory.Stretch(_bombLayer);
 
             // Transparent raycast catcher for drag input across the whole board.
             var input = new GameObject("Input", typeof(RectTransform), typeof(Image));
@@ -44,15 +77,30 @@ namespace Reveal.Game
             input.AddComponent<DragProxy>().Target = this;
         }
 
+        bool _shadowAdded;
+
         public void Load(Board board, Texture2D picture, float sizePx)
         {
             _board = board;
             _rt.sizeDelta = new Vector2(sizePx, sizePx);
+            if (!_shadowAdded) { Art.AddShadow(_rt, 40f, -16f); _shadowAdded = true; }
             _picture.texture = picture;
+            // Center-crop the picture to a square so wide (16:9) or tall art
+            // fills the board without distortion.
+            float aw = picture.width, ah = picture.height;
+            if (aw > ah) { float u = ah / aw; _picture.uvRect = new Rect((1f - u) / 2f, 0f, u, 1f); }
+            else if (ah > aw) { float v = aw / ah; _picture.uvRect = new Rect(0f, (1f - v) / 2f, 1f, v); }
+            else _picture.uvRect = new Rect(0f, 0f, 1f, 1f);
             _cell = sizePx / board.Size;
+
+            _gridOverlay.texture = Art.GridTexture(board.Size, 64, new Color(1f, 1f, 1f, 0.09f));
+            _gridOverlay.enabled = true; // may have been hidden by CelebrateReveal
 
             if (_covers != null)
                 foreach (var c in _covers) if (c) Destroy(c.gameObject);
+
+            foreach (Transform t in _clueLayer) Destroy(t.gameObject);
+            foreach (Transform t in _bombLayer) Destroy(t.gameObject);
 
             _covers = new Image[board.Size, board.Size];
             var scene = Scenes.ForLevel(board.Level);
@@ -61,31 +109,231 @@ namespace Reveal.Game
                     _covers[r, c] = MakeCover(r, c, scene, board.Bomb[r, c]);
 
             RefreshAll();
+
+            // Seed clues on the endowed (pre-revealed) safe tiles.
+            for (int r = 0; r < board.Size; r++)
+                for (int c = 0; c < board.Size; c++)
+                    if (board.Revealed[r, c] && !board.Bomb[r, c])
+                        ShowClue(r, c, board.Adj[r, c]);
         }
 
         Image MakeCover(int r, int c, Scene scene, bool bomb)
         {
+            // Bombs are hidden now — every cover is identical, so danger is
+            // deduced from the revealed clues, not seen on the cover.
+            //
+            // Deliberately NOT using GameArt.Tile (an ornate, photoreal
+            // engraved-medallion render) here anymore. It was the single
+            // biggest source of "this looks off": a busy painterly texture,
+            // tiled 49+ times, sitting between a flat HUD above and a
+            // painted picture below is a third competing visual register on
+            // the one screen the player stares at the whole session. It's
+            // also exactly the kind of fussy small-scale detail that turns
+            // to mush under video compression. Same flat rounded-rect +
+            // gloss language as every button/card in the UI instead.
             var go = new GameObject($"C{r}_{c}", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(_rt, false);
-            var img = go.GetComponent<Image>();
-            img.sprite = UIFactory.SolidSprite();
-            img.type = Image.Type.Sliced;
-            img.raycastTarget = false;
-            img.color = bomb ? new Color(0.15f, 0.16f, 0.22f, 1f)
-                             : Color.Lerp(scene.BgTop, Color.white, 0.35f);
+            var rim = go.GetComponent<Image>();
 
-            var rt = img.rectTransform;
+            float gap = Mathf.Max(4f, _cell * 0.10f);
+            var rt = rim.rectTransform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); // top-left origin
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(_cell - 3f, _cell - 3f);
+            rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
             rt.anchoredPosition = CellCenter(r, c);
 
-            if (bomb)
-            {
-                var dot = UIFactory.Label(go.transform, "b", "✦", Mathf.RoundToInt(_cell * 0.5f), new Color(1f, 0.4f, 0.45f));
-                UIFactory.Stretch(dot.rectTransform);
-            }
-            return img;
+            // A near-white flat fill with a thin outline reads as an empty
+            // checkbox, not a game tile -- flat design still needs real
+            // saturated colour and tactile depth to feel alive (Two Dots,
+            // Candy Crush's own gems are bold flat colour, not pale grey).
+            // Two alternating accents in a checkerboard give the board some
+            // visual rhythm even before anything is revealed, and the
+            // darker base peeking out from behind a smaller, lighter face
+            // is the same "candy" extrusion used on the bomb badge/buttons.
+            // Coral/gold, not sky/mint -- those are the two accent colours
+            // already carrying the whole rest of the UI (hearts, coins,
+            // stars, danger clues), so the board's checkerboard now reads
+            // as part of the same game instead of a different one bolted
+            // on top.
+            Color accent = (r + c) % 2 == 0 ? Theme.AccentCoral : Theme.AccentGold;
+            rim.sprite = Art.RoundedRect(Theme.RadiusChip, false);
+            rim.type = Image.Type.Sliced;
+            rim.raycastTarget = false;
+            rim.color = Color.Lerp(accent, Color.black, 0.28f);
+
+            var faceGo = new GameObject("face", typeof(RectTransform), typeof(Image));
+            faceGo.transform.SetParent(go.transform, false);
+            var face = faceGo.GetComponent<Image>();
+            face.sprite = Art.RoundedRect(Theme.RadiusChip, true);
+            face.type = Image.Type.Sliced;
+            face.raycastTarget = false;
+            face.color = Color.Lerp(accent, Color.white, 0.18f);
+            UIFactory.Stretch(face.rectTransform, _cell * 0.07f);
+
+            UIFactory.AddGloss(faceGo.transform, 0.5f, 0.95f, 0.12f);
+
+            return rim;
+        }
+
+        static readonly Color[] DangerColors =
+        {
+            default,                          // 0 (unused)
+            new Color(1f, 0.85f, 0.30f),      // 1 - soft amber
+            new Color(1f, 0.62f, 0.24f),      // 2 - orange
+            new Color(1f, 0.37f, 0.42f),      // 3+ - red
+        };
+
+        /// <summary>
+        /// Reveal a Minesweeper-style clue on a safe cell: a small heat-coloured
+        /// disc with the adjacent-bomb count. Count 0 shows nothing so the
+        /// picture stays clean.
+        /// </summary>
+        public void ShowClue(int r, int c, int count)
+        {
+            if (count <= 0 || _clueLayer == null) return;
+            Color dc = DangerColors[Mathf.Min(count, 3)];
+
+            var go = new GameObject($"clue{r}_{c}", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(_clueLayer, false);
+            var disc = go.GetComponent<Image>();
+            disc.sprite = Art.RoundedRect(40, true);
+            disc.type = Image.Type.Sliced;
+            disc.raycastTarget = false;
+            disc.color = new Color(dc.r, dc.g, dc.b, 1f);
+            var rt = disc.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(_cell * 0.46f, _cell * 0.46f);
+            rt.anchoredPosition = CellCenter(r, c);
+
+            // Dark rim so the badge pops against any picture behind it.
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+
+            Color txt = count == 1 ? new Color(0.35f, 0.24f, 0.05f) : Color.white;
+            var t = UIFactory.Label(go.transform, "n", count.ToString(),
+                Mathf.RoundToInt(_cell * 0.28f), txt, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIFactory.Stretch(t.rectTransform);
+            var textOutline = t.gameObject.AddComponent<Outline>();
+            textOutline.effectColor = new Color(0f, 0f, 0f, 0.4f);
+            textOutline.effectDistance = new Vector2(1f, -1f);
+
+            go.AddComponent<Reveal.UI.Appear>(); // bounce in
+        }
+
+        /// <summary>
+        /// Draws a bomb tile with an actual bomb glyph (dark round body, lit
+        /// fuse, spark) — used both the instant a bomb is hit and for every
+        /// remaining bomb revealed at game over, so a "revealed bomb" always
+        /// shows what it was rather than an empty coloured square.
+        /// </summary>
+        public void ShowBombMark(int r, int c)
+        {
+            var go = new GameObject($"bomb{r}_{c}", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(_bombLayer, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = Art.RoundedRect(20, true);
+            img.type = Image.Type.Sliced;
+            img.raycastTarget = false;
+            img.color = new Color(1f, 0.30f, 0.38f, 0.95f);
+            var rt = img.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            float gap = Mathf.Max(4f, _cell * 0.10f);
+            rt.sizeDelta = new Vector2(_cell - gap, _cell - gap);
+            rt.anchoredPosition = CellCenter(r, c);
+
+            // Bomb body
+            var bodyGo = new GameObject("body", typeof(RectTransform), typeof(Image));
+            bodyGo.transform.SetParent(go.transform, false);
+            var body = bodyGo.GetComponent<Image>();
+            body.sprite = Art.RoundedRect(60, false);
+            body.type = Image.Type.Sliced;
+            body.raycastTarget = false;
+            body.color = UIFactory.Hex("#20222f");
+            UIFactory.Stretch(body.rectTransform, _cell * 0.16f);
+
+            // Gloss highlight
+            var glossGo = new GameObject("gloss", typeof(RectTransform), typeof(Image));
+            glossGo.transform.SetParent(bodyGo.transform, false);
+            var gloss = glossGo.GetComponent<Image>();
+            gloss.sprite = Art.RoundedRect(60, false);
+            gloss.type = Image.Type.Sliced;
+            gloss.raycastTarget = false;
+            gloss.color = new Color(1f, 1f, 1f, 0.35f);
+            var grt = gloss.rectTransform;
+            grt.anchorMin = new Vector2(0.18f, 0.55f); grt.anchorMax = new Vector2(0.45f, 0.8f);
+            grt.offsetMin = grt.offsetMax = Vector2.zero;
+
+            // Fuse (thin bar angled up-right from the body)
+            var fuseGo = new GameObject("fuse", typeof(RectTransform), typeof(Image));
+            fuseGo.transform.SetParent(go.transform, false);
+            var fuse = fuseGo.GetComponent<Image>();
+            fuse.color = UIFactory.Hex("#7a5a3a");
+            fuse.raycastTarget = false;
+            var frt = fuse.rectTransform;
+            frt.anchorMin = frt.anchorMax = new Vector2(0.68f, 0.78f);
+            frt.pivot = new Vector2(0f, 0f);
+            frt.sizeDelta = new Vector2(_cell * 0.32f, _cell * 0.07f);
+            frt.localRotation = Quaternion.Euler(0, 0, 40f);
+
+            // Spark at the fuse tip
+            var sparkGo = new GameObject("spark", typeof(RectTransform), typeof(Image));
+            sparkGo.transform.SetParent(go.transform, false);
+            var spark = sparkGo.GetComponent<Image>();
+            spark.sprite = Art.RoundedRect(30, true);
+            spark.type = Image.Type.Sliced;
+            spark.raycastTarget = false;
+            spark.color = UIFactory.Hex("#ffcb47");
+            var srt = spark.rectTransform;
+            srt.anchorMin = srt.anchorMax = new Vector2(0.5f, 1f);
+            srt.pivot = new Vector2(0.5f, 0.5f);
+            srt.anchoredPosition = new Vector2(_cell * 0.30f, -_cell * 0.05f);
+            srt.sizeDelta = new Vector2(_cell * 0.18f, _cell * 0.18f);
+
+            go.AddComponent<Reveal.UI.Appear>(); // bounce in
+        }
+
+        /// <summary>
+        /// Win payoff: pop away every remaining cover and clear the clue
+        /// discs and grid so the finished artwork shows clean for a beat —
+        /// the whole point of the game is revealing the picture, so the
+        /// player should actually get to see it before the results card.
+        /// </summary>
+        public void CelebrateReveal()
+        {
+            if (_covers == null) return;
+            for (int r = 0; r < _board.Size; r++)
+                for (int c = 0; c < _board.Size; c++)
+                    if (_covers[r, c] != null)
+                    {
+                        _covers[r, c].raycastTarget = false;
+                        _covers[r, c].gameObject.AddComponent<Reveal.UI.Vanish>();
+                        _covers[r, c] = null;
+                    }
+            foreach (Transform t in _clueLayer) Destroy(t.gameObject);
+            foreach (Transform t in _bombLayer) Destroy(t.gameObject);
+            _gridOverlay.enabled = false;
+        }
+
+        /// <summary>Show every bomb (used on game over so the player sees the truth).</summary>
+        public void RevealBombs()
+        {
+            if (_board == null) return;
+            for (int r = 0; r < _board.Size; r++)
+                for (int c = 0; c < _board.Size; c++)
+                    if (_board.Bomb[r, c])
+                    {
+                        // Still-covered bombs need their cover cleared first,
+                        // otherwise the mark would be drawn underneath it.
+                        if (_covers[r, c] != null)
+                        {
+                            Destroy(_covers[r, c].gameObject);
+                            _covers[r, c] = null;
+                        }
+                        ShowBombMark(r, c);
+                    }
         }
 
         Vector2 CellCenter(int r, int c)
@@ -111,7 +359,8 @@ namespace Reveal.Game
         {
             if (_covers != null && _covers[r, c] != null)
             {
-                Destroy(_covers[r, c].gameObject);
+                _covers[r, c].raycastTarget = false;
+                _covers[r, c].gameObject.AddComponent<Reveal.UI.Vanish>(); // pop, then self-destruct
                 _covers[r, c] = null;
             }
         }
