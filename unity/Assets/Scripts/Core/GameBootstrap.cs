@@ -47,13 +47,14 @@ namespace Reveal.Core
             scaler.referenceResolution = new Vector2(1080, 1920);
             scaler.matchWidthOrHeight = 0.5f;
 
-            // Vibrant full-screen gradient backdrop (behind all UI).
+            // Flat procedural gradient backdrop (behind all UI) -- not the
+            // painterly rendered sky art, for the same reason every other
+            // full-screen backdrop dropped it: a photoreal image behind
+            // flat vector UI reads as two different games stitched together.
             var bgGo = new GameObject("Background", typeof(RectTransform), typeof(RawImage));
             bgGo.transform.SetParent(canvasGo.transform, false);
             var bg = bgGo.GetComponent<RawImage>();
-            var bgArt = GameArt.Background;
-            bg.texture = bgArt != null ? bgArt
-                : Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
+            bg.texture = Art.Gradient(Theme.BgTop, Theme.BgBottom);
             bg.raycastTarget = false;
             var bgRt = bg.rectTransform;
             bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;

@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Reveal.UI
 {
     /// <summary>
@@ -36,5 +38,24 @@ namespace Reveal.UI
         public const int TextLabel = 32;    // buttons, stat values at rest
         public const int TextTitle = 44;    // section headers
         public const int TextDisplay = 64;  // hero titles ("Board Cleared!")
+
+        // ---- Colour palette: one purple-dusk backdrop, one accent set ----
+        // Every screen shares this exact gradient and card colour instead of
+        // each screen/card inventing its own near-but-not-quite purple. That
+        // was invisible in isolation but reads as "off" the moment two
+        // screens are seen back to back.
+        public static readonly Color BgTop = UIFactory.Hex("#4a3aa8");
+        public static readonly Color BgBottom = UIFactory.Hex("#140f2e");
+        public static readonly Color CardTop = UIFactory.Hex("#463a8f");
+        public static readonly Color CardBottom = UIFactory.Hex("#150f30");
+        public static readonly Color Scrim = new Color(0.02f, 0.03f, 0.06f, 0.88f);
+
+        public static readonly Color AccentCoral = UIFactory.Hex("#ff5f7e");
+        public static readonly Color AccentGold = UIFactory.Hex("#ffcb47");
+        public static readonly Color AccentMint = UIFactory.Hex("#3ddc97");
+        public static readonly Color AccentSky = UIFactory.Hex("#4fb0ff");
+
+        public static readonly Color TextOnDark = Color.white;
+        public static readonly Color TextOnDarkDim = new Color(1f, 1f, 1f, 0.62f);
     }
 }

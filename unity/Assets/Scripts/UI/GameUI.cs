@@ -242,7 +242,7 @@ namespace Reveal.UI
         }
 
         // ---------------- overlays ----------------
-        RectTransform Overlay(string name, out RectTransform card, bool opaque = false, float scrimAlpha = 0.88f, Texture2D bgOverride = null)
+        RectTransform Overlay(string name, out RectTransform card, bool opaque = false, float scrimAlpha = 0.88f)
         {
             RectTransform ov;
             if (opaque)
@@ -250,9 +250,16 @@ namespace Reveal.UI
                 // Full opaque gradient — a real screen, nothing bleeds behind it.
                 var go = new GameObject(name, typeof(RectTransform), typeof(RawImage));
                 go.transform.SetParent(_root, false);
+                // Flat procedural gradient for every full-screen backdrop --
+                // deliberately NOT the painterly rendered sky/attic
+                // textures (GameArt.Background / MenuBackground). Those are
+                // photoreal, everything else on screen (icons, buttons,
+                // cards) is flat vector "toy" art; putting a painted photo
+                // full-bleed behind flat UI is the single biggest source of
+                // the "doesn't look right" feeling across every screen, not
+                // just the card. One flat gradient language, everywhere.
                 var ri = go.GetComponent<RawImage>();
-                var bgArt = bgOverride != null ? bgOverride : GameArt.Background;
-                ri.texture = bgArt != null ? bgArt : Art.Gradient(UIFactory.Hex("#4a3aa8"), UIFactory.Hex("#140f30"));
+                ri.texture = Art.Gradient(Theme.BgTop, Theme.BgBottom);
                 ri.uvRect = new Rect(0, 0, 1, 1);
                 ov = go.GetComponent<RectTransform>();
             }
@@ -262,7 +269,8 @@ namespace Reveal.UI
                 // against gameplay behind it. A translucent tint alone
                 // blends with a warm/bright background into a muddy brown
                 // wash rather than a clean darkened backdrop.
-                ov = UIFactory.Panel(_root, name, new Color(0.02f, 0.03f, 0.06f, scrimAlpha));
+                var scrim = Theme.Scrim; scrim.a = scrimAlpha;
+                ov = UIFactory.Panel(_root, name, scrim);
             }
             UIFactory.Stretch(ov);
 
@@ -332,7 +340,7 @@ namespace Reveal.UI
             var cardGradGo = new GameObject("Gradient", typeof(RectTransform), typeof(RawImage));
             cardGradGo.transform.SetParent(clipGo.transform, false);
             var cardGrad = cardGradGo.GetComponent<RawImage>();
-            cardGrad.texture = Art.Gradient(UIFactory.Hex("#463a8f"), UIFactory.Hex("#150f30"));
+            cardGrad.texture = Art.Gradient(Theme.CardTop, Theme.CardBottom);
             cardGrad.raycastTarget = false;
             UIFactory.Stretch(cardGrad.rectTransform);
 
@@ -442,7 +450,7 @@ namespace Reveal.UI
 
         void BuildMenu()
         {
-            _menu = Overlay("Menu", out var card, opaque: true, bgOverride: GameArt.MenuBackground);
+            _menu = Overlay("Menu", out var card, opaque: true);
 
             // Card: a slim gradient panel in the lower two-thirds; the hero
             // art (mascot + logo + coin) sits on the background above it.

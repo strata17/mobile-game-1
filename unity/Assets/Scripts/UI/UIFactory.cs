@@ -87,41 +87,13 @@ namespace Reveal.UI
             shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
             shadow.effectDistance = new Vector2(0, -5);
 
-            // Real photographed pearl-material texture (tinted per button
-            // colour) instead of a flat fill, when the asset is available.
-            // Tints cleanly across any button colour since the source
-            // material is neutral white/pearl -- multiplying white by a
-            // colour reproduces that colour exactly, unlike trying to
-            // re-tint an already-coloured render.
-            var buttonMat = GameArt.ButtonMaterial;
-            if (buttonMat != null)
-            {
-                // Mask lives on its own child, not on `go` itself: `go`'s
-                // final size is set by the caller AFTER Button() returns
-                // (every call site does `((RectTransform)btn.transform)
-                // .sizeDelta = ...` right after), so a Mask attached here
-                // would compute its clip shape against the wrong (default)
-                // size. A child that stretches to fill always reflects the
-                // button's current, correct rect.
-                var clipGo = new GameObject("ClipFrame", typeof(RectTransform), typeof(Image), typeof(Mask));
-                clipGo.transform.SetParent(go.transform, false);
-                clipGo.transform.SetAsFirstSibling();
-                var clipImg = clipGo.GetComponent<Image>();
-                clipImg.sprite = Art.RoundedRect(Theme.RadiusControl, false);
-                clipImg.type = Image.Type.Sliced;
-                clipImg.color = bg;
-                clipGo.GetComponent<Mask>().showMaskGraphic = true;
-                Stretch(clipGo.GetComponent<RectTransform>());
-
-                var matGo = new GameObject("Material", typeof(RectTransform), typeof(RawImage));
-                matGo.transform.SetParent(clipGo.transform, false);
-                var mat = matGo.GetComponent<RawImage>();
-                mat.texture = buttonMat;
-                mat.color = bg;
-                mat.raycastTarget = false;
-                Stretch(mat.rectTransform);
-            }
-
+            // Flat colour fill (already set on `img` above) + a procedural
+            // top-gloss overlay is the entire button surface -- no
+            // photoreal material texture. A rendered pearl/plastic photo
+            // sitting on a flat vector button is the exact "mixing flat and
+            // skeuomorphic" clash that made every screen feel incoherent;
+            // one flat glossy language, applied everywhere, reads as an
+            // actual design system instead of a pile of one-off looks.
             AddGloss(go.transform);
 
             var txt = Label(go.transform, "Label", label, size, fg, TextAnchor.MiddleCenter, FontStyle.Bold);
